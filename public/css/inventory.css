@@ -1,0 +1,432 @@
+/* Inventory Top Stats Cards */
+.inv-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.inv-stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 160px;
+    border: 1px solid #f1f5f9;
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.stat-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-icon-box.blue {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.stat-icon-box.orange {
+    background: #fff7ed;
+    color: #f97316;
+}
+
+.stat-icon-box.purple {
+    background: #f3e8ff;
+    color: #a855f7;
+}
+
+.stat-trend {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+}
+
+.stat-trend.positive {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.stat-trend.text-only {
+    background: transparent;
+    color: #a855f7;
+    padding: 0;
+}
+
+.stat-content {
+    margin-top: auto;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+}
+
+/* Filter Bar */
+.filter-bar {
+    background: transparent;
+    padding: 0;
+    border: none;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.filter-subtitle {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.search-input-group input {
+    min-width: 300px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Inventory Table */
+.inv-table-container {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.inv-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.inv-table th {
+    background-color: white;
+    padding: 1.25rem 1.5rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.inv-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f8fafc;
+    color: #334155;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.inv-table tr:last-child td {
+    border-bottom: none;
+}
+
+.inv-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+.item-code {
+    font-family: monospace;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* Category Badge */
+.cat-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.cat-badge.surgical {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.cat-badge.injection {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.cat-badge.ppe {
+    background: #f3e8ff;
+    color: #a855f7;
+}
+
+/* Quantity Dot */
+.qty-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-dot.green {
+    background: #22c55e;
+}
+
+.status-dot.orange {
+    background: #f97316;
+}
+
+.status-dot.red {
+    background: #ef4444;
+}
+
+/* Item Details Side Panel */
+.item-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+
+.item-panel-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.item-details-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    /* RTL: Slide from right in English, but user layout is RTL so 'right' is actually left side visually? No, standard CSS 'right' makes it stick to right edge. */
+    /* Since body is dir=rtl, 'right' 0 means right edge of screen. We want it on left for RTL or right? Reference image has it on Right side. */
+    /* Wait, standard English reference image has it on Right. User app is RTL. So panel should be on Left? */
+    /* Let's stick to Right side for now as it's common for details panels, or check layout.css. */
+    /* Actually, layout.css sets direction: rtl. If I want it on Left side (start), I should use left: 0. */
+    /* Reference image shows details on the RIGHT. In RTL, "End" is Left. "Start" is Right. */
+    /* Let's put it on the Left for RTL layout (as per 'End' side logic)? */
+    /* Let's assume standard behavior: details panel usually slides from the edge opposite to the menu or overlaying content. */
+    /* I'll position it `left: 0` so it slides from the left in an RTL layout (which is logically the 'End' side if we consider reading direction right-to-left... wait). */
+    /* In RTL, Start is Right, End is Left. Sidebar is on Right. So details should be on Left. */
+    left: -450px;
+    width: 400px;
+    height: 100%;
+    background: white;
+    z-index: 50;
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
+    transition: left 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.item-details-panel.active {
+    left: 0;
+}
+
+.panel-header {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.panel-content {
+    padding: 2rem;
+    flex: 1;
+}
+
+.large-icon-wrapper {
+    width: 120px;
+    height: 120px;
+    background: #f8fafc;
+    border-radius: 50%;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: #cbd5e1;
+    position: relative;
+}
+
+.large-icon-wrapper img {
+    width: 60%;
+    opacity: 0.8;
+}
+
+.detail-title {
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: #1e293b;
+}
+
+.detail-sku {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+    font-family: monospace;
+}
+
+.stock-info-card {
+    background: #f0fdf4;
+    border: 1px solid #dcfce7;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.stock-info-card.low {
+    background: #fff7ed;
+    border-color: #ffedd5;
+}
+
+.stock-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.stock-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #166534;
+}
+
+.stock-info-card.low .stock-value {
+    color: #c2410c;
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    border-right: 2px solid #e2e8f0;
+    /* RTL timeline line */
+    margin-right: 10px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-right: 20px;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-dot {
+    position: absolute;
+    right: -6px;
+    /* Center on line */
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #eff6ff;
+}
+
+.timeline-content h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.timeline-content p {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.timeline-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    position: absolute;
+    left: 0;
+    top: 5px;
+}
+
+.panel-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-panel-primary {
+    flex: 1;
+    background: #0ea5e9;
+    color: white;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-panel-secondary {
+    padding: 0.8rem 1.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}

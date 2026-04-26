@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Overview | Al-Quds Center</title>
+    <meta name="description" content="Manage and monitor all Al-Quds Center warehouses, inventory, and transfers.">
+    <!-- Export Libraries & Fonts -->
+    <script src="./js/arabic_pdf_helpers.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/warehouse.css">
+
+</head>
+
+<body>
+
+    <div class="wh-shell">
+
+        <!-- ── Left Sidebar ── -->
+        <aside class="wh-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-truck-medical"></i></div>
+                <div>
+                    <div class="brand-name">Al-Quds Center</div>
+                    <div class="brand-sub">Medical Supplies Mgmt</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-link" href="index.html">
+                    <i class="fa-solid fa-gauge-high"></i> Dashboard
+                </a>
+                <a class="nav-link active" href="warehouse.html">
+                    <i class="fa-solid fa-boxes-stacked"></i> Inventory Control
+                </a>
+                <a class="nav-link" href="doctors.html">
+                    <i class="fa-solid fa-users"></i> Staff Management
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-chart-bar"></i> Reports &amp; Analytics
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fa-solid fa-gear"></i> System Settings
+                </a>
+                <a class="nav-link" href="suppliers.html">
+                    <i class="fa-solid fa-store"></i> Local Suppliers
+                </a>
+                <a class="nav-link" href="transfer.html" style="margin-top:0.5rem; color:#f97316;">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Transfer Console
+                </a>
+            
+                <a class="nav-link" href="retail_sales.html" style="color:#0ea5e9; font-weight: bold;">
+                    <i class="fa-solid fa-cash-register"></i> مبيعات الجمهور (POS)
+                </a>
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">AS</div>
+                <div>
+                    <div class="user-name">Dr. Ahmed Salem</div>
+                    <div class="user-role">ADMINISTRATOR</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── Main ── -->
+        <div class="wh-main">
+            <div class="wh-content">
+
+                <!-- ── Stats Cards ── -->
+                <div class="stats-grid" id="stats-grid">
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">ACTIVE WAREHOUSES</div>
+                            <div class="stat-number" id="stat-warehouses">—</div>
+                        </div>
+                        <div class="stat-icon-box" style="background:#dbeafe; color:#3b82f6;">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">TOTAL INVENTORY VALUE</div>
+                            <div class="stat-number" id="stat-value">—</div>
+                        </div>
+                        <div class="stat-icon-box" style="background:#dcfce7; color:#16a34a;">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">PRODUCT LINES</div>
+                            <div class="stat-number" id="stat-products">—</div>
+                        </div>
+                        <div class="stat-icon-box" style="background:#fef9c3; color:#ca8a04;">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Warehouse Cards Grid ── -->
+                <div class="wh-cards-grid" id="wh-cards-grid">
+                    <!-- Skeleton cards -->
+                    <div class="wh-card skeleton-card">
+                        <div class="skeleton-row" style="height:80px;margin:0;border-radius:10px;"></div>
+                    </div>
+                    <div class="wh-card skeleton-card">
+                        <div class="skeleton-row" style="height:80px;margin:0;border-radius:10px;"></div>
+                    </div>
+                    <div class="wh-card skeleton-card">
+                        <div class="skeleton-row" style="height:80px;margin:0;border-radius:10px;"></div>
+                    </div>
+                </div>
+
+                <!-- ── Warehouse Overview Header ── -->
+                <div class="overview-header">
+                    <h2 class="overview-title">Warehouse Overview</h2>
+                    <div class="overview-actions">
+                        <!-- Search bar inline -->
+                        <div class="search-wrapper" id="search-wrapper">
+                            <input type="text" class="search-input" id="search-input" placeholder="Search items…"
+                                oninput="filterInventory(this.value)">
+                        </div>
+                        <button class="btn-outline" id="btn-search-toggle" onclick="toggleSearch()"
+                            title="Search inventory">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                        <button class="btn-outline btn-add-wh" onclick="openAddModal()">
+                            <i class="fa-solid fa-plus"></i> Add Warehouse
+                        </button>
+                        <button class="btn-outline" onclick="generateInventoryReportPDF()">
+                            <i class="fa-solid fa-file-pdf"></i> تحميل تقرير الجرد
+                        </button>
+                        <button class="btn-outline" onclick="printReport()">
+                            <i class="fa-solid fa-print"></i> Print Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="wh-tabs" id="wh-tabs">
+                    <button class="wh-tab active" data-warehouse-id="" onclick="selectTab(this, '')">
+                        All Warehouses
+                    </button>
+                    <!-- Warehouse tabs injected by JS -->
+                </div>
+
+                <!-- Overview Body: table + right panel -->
+                <div class="overview-body">
+
+                    <!-- Inventory Panel -->
+                    <div class="inventory-panel" id="inventory-panel">
+                        <div class="inventory-panel-header"
+                            style="display: flex; justify-content: space-between; align-items: center;">
+                            <div id="inventory-panel-title">Current Inventory List</div>
+                            <div id="wh-specific-value" style="font-weight: bold; color: #16a34a; font-size: 1.1rem;">
+                            </div>
+                        </div>
+
+                        <div class="inv-list">
+                            <div class="inv-list-head" style="display:grid; grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr; padding-right: 20px; font-weight:600; color:#64748b; font-size:0.75rem; letter-spacing:0.5px; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:10px;">
+                                <span>ITEM NAME</span>
+                                <span class="col-qty">QUANTITY</span>
+                                <span>UNIT PRICE (سعر الوحدة)</span>
+                                <span>TOTAL VALUE (إجمالي القيمة)</span>
+                                <span class="col-expiry">EXPIRY DATE</span>
+                            </div>
+                            <div id="inventory-rows">
+                                <div class="skeleton-row"></div>
+                                <div class="skeleton-row"></div>
+                                <div class="skeleton-row"></div>
+                            </div>
+                        </div>
+
+                        <a class="view-all-btn" href="javascript:void(0)" onclick="loadAllItems()">
+                            View All Items
+                        </a>
+                    </div>
+
+                    <!-- Right Panel -->
+                    <div class="wh-right-panel">
+
+                        <!-- Responsible Employee was here, completely removed -->
+
+                        <!-- Last Movements -->
+                        <div class="side-card">
+                            <div class="side-card-title">LAST MOVEMENTS</div>
+                            <div class="movements-list" id="movements-list">
+                                <div class="skeleton-row" style="height:40px;margin:0;border-radius:8px;"></div>
+                                <div class="skeleton-row" style="height:40px;margin:0;border-radius:8px;"></div>
+                                <div class="skeleton-row" style="height:40px;margin:0;border-radius:8px;"></div>
+                            </div>
+                        </div>
+
+                    </div><!-- /.wh-right-panel -->
+
+                </div><!-- /.overview-body -->
+
+            </div><!-- /.wh-content -->
+        </div><!-- /.wh-main -->
+
+    </div><!-- /.wh-shell -->
+
+    <!-- ── Add Warehouse Modal ── -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBack(event)">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">
+                    <i class="fa-solid fa-warehouse"></i> Add New Warehouse
+                </div>
+                <button class="modal-close" onclick="closeAddModal()" aria-label="Close">&times;</button>
+            </div>
+            <form class="modal-form" id="add-warehouse-form" onsubmit="submitNewWarehouse(event)">
+                <div class="form-group">
+                    <label for="wh-name">Warehouse Name <span class="req">*</span></label>
+                    <input type="text" id="wh-name" placeholder="e.g., North Storage Unit" required maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label for="wh-location">Location <span class="req">*</span></label>
+                    <input type="text" id="wh-location" placeholder="e.g., Jerusalem Sector 7" required maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="wh-capacity">Capacity (units)</label>
+                    <input type="number" id="wh-capacity" placeholder="10000" min="100" max="999999" value="10000">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+                    <button type="submit" class="btn-save" id="btn-save-wh">
+                        <i class="fa-solid fa-plus"></i> Create Warehouse
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" title="Quick Transfer" onclick="window.location.href='transfer.html'">
+        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+    </button>
+
+    <!-- Print-only section -->
+    <div id="print-area" class="print-area"></div>
+
+    <script src="js/uom_utils.js"></script>
+    <script src="js/warehouse.js"></script>
+</body>
+
+</html>

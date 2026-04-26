@@ -1,0 +1,375 @@
+{
+  "orders": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "order_number",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "client_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "pharmacy_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "warehouse_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "expected_delivery",
+      "Type": "date"
+    },
+    {
+      "Field": "total_amount",
+      "Type": "decimal(12,2)"
+    },
+    {
+      "Field": "status",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp"
+    },
+    {
+      "Field": "staff_id",
+      "Type": "int(11)"
+    }
+  ],
+  "order_items": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "order_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "product_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "warehouse_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "batch_no",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "expiry_date",
+      "Type": "date"
+    },
+    {
+      "Field": "qty",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "base_price",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "unit_price",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "profit_margin",
+      "Type": "decimal(5,2)"
+    },
+    {
+      "Field": "discount",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "tax",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "subtotal",
+      "Type": "decimal(12,2)"
+    }
+  ],
+  "client_transactions": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "client_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "pharmacy_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "type",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "amount",
+      "Type": "decimal(12,2)"
+    },
+    {
+      "Field": "reference_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "date",
+      "Type": "timestamp"
+    }
+  ],
+  "doctors": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)"
+    },
+    {
+      "Field": "specialty",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(255)"
+    },
+    {
+      "Field": "license_number",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "status",
+      "Type": "enum('active','away')"
+    },
+    {
+      "Field": "location",
+      "Type": "varchar(255)"
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp"
+    },
+    {
+      "Field": "credit_limit",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "total_debt",
+      "Type": "decimal(10,2)"
+    }
+  ],
+  "pharmacies": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)"
+    },
+    {
+      "Field": "license_number",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "contact_person",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "area",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(255)"
+    },
+    {
+      "Field": "status",
+      "Type": "enum('active','pending','suspended')"
+    },
+    {
+      "Field": "credit_limit",
+      "Type": "decimal(12,2)"
+    },
+    {
+      "Field": "total_debt",
+      "Type": "decimal(12,2)"
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp"
+    }
+  ],
+  "products": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)"
+    },
+    {
+      "Field": "quantity",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "price",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "expiry_date",
+      "Type": "date"
+    },
+    {
+      "Field": "sku",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "category",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "manufacturer",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "purchase_price",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "image_url",
+      "Type": "varchar(255)"
+    }
+  ],
+  "warehouse_inventory": [
+    {
+      "Field": "warehouse_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "product_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "current_stock",
+      "Type": "int(11)"
+    }
+  ],
+  "local_suppliers": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "supplier_code",
+      "Type": "varchar(20)"
+    },
+    {
+      "Field": "company_name",
+      "Type": "varchar(150)"
+    },
+    {
+      "Field": "contact_person",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(30)"
+    },
+    {
+      "Field": "city_area",
+      "Type": "varchar(100)"
+    },
+    {
+      "Field": "notes",
+      "Type": "text"
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp"
+    },
+    {
+      "Field": "updated_at",
+      "Type": "timestamp"
+    }
+  ],
+  "import_logs": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "product_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "warehouse_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "supplier_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "quantity",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "unit_price",
+      "Type": "decimal(10,2)"
+    },
+    {
+      "Field": "status",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp"
+    }
+  ],
+  "supplier_transactions": [
+    {
+      "Field": "id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "supplier_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "import_log_id",
+      "Type": "int(11)"
+    },
+    {
+      "Field": "total_amount",
+      "Type": "decimal(12,2)"
+    },
+    {
+      "Field": "transaction_type",
+      "Type": "varchar(50)"
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp"
+    }
+  ],
+  "suppliers": "Table not found"
+}

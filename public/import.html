@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عمليات الوارد | مركز القدس</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/import.css">
+</head>
+
+<body>
+    <div class="imp-shell">
+
+        <!-- ── Sidebar ── -->
+        <aside class="imp-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-truck-medical"></i></div>
+                <div>
+                    <div class="brand-name">مركز القدس</div>
+                    <div class="brand-sub">مستودع الأدوية v2.4</div>
+                </div>
+            </div>
+
+            <div class="sidebar-menu-label">القائمة الرئيسية</div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-table-cells-large"></i> لوحة التحكم
+                </a>
+                <a class="nav-item" href="warehouse.html">
+                    <i class="fa-solid fa-box-archive"></i> المخزون
+                </a>
+                <a class="nav-item active" href="import.html">
+                    <i class="fa-solid fa-file-arrow-down" style="color: #3b82f6;"></i> إدارة الوارد
+                </a>
+                <a class="nav-item" href="#">
+                    <i class="fa-solid fa-file-arrow-up"></i> إدارة الصادر
+                </a>
+                <a class="nav-item" href="suppliers.html">
+                    <i class="fa-solid fa-handshake"></i> الموردين
+                </a>
+                <a class="nav-item" href="withdrawals.html">
+                    <i class="fa-solid fa-hand-holding-dollar"></i> المسحوبات
+                </a>
+            </nav>
+
+        </aside>
+
+        <!-- ── Main Area ── -->
+        <main class="imp-main">
+
+            <!-- Topbar -->
+            <header class="imp-topbar">
+                <div class="topbar-left">
+                    <h1>عمليات الوارد</h1>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active">وارد</button>
+                        <button class="toggle-btn" onclick="window.location.href='#'">صادر</button>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" placeholder="بحث عن طلبات، أصناف...">
+                    </div>
+                    <button class="icon-action">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="badge"></span>
+                    </button>
+                    <button class="icon-action">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Body -->
+            <div class="imp-body">
+
+                <!-- Stat Cards -->
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="label">المخزون الوارد</div>
+                            <div class="value" id="stat-incoming">0 <span>وحدات</span></div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="label">القيمة الإجمالية</div>
+                            <div class="value" id="stat-value">$0.00</div>
+                        </div>
+                        <div class="stat-icon green"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="label">قيد المراجعة</div>
+                            <div class="value" id="stat-pending">0 <span>شحنات</span></div>
+                        </div>
+                        <div class="stat-icon orange"><i class="fa-regular fa-clock"></i></div>
+                    </div>
+                </div>
+
+                <!-- Main Grid Layout -->
+                <div class="imp-layout">
+
+                    <!-- Active Suppliers Column -->
+                    <div class="suppliers-col">
+                        <div class="col-header">
+                            <h3>الموردين النشطين</h3>
+                            <a href="suppliers.html">عرض الكل</a>
+                        </div>
+                        <div class="supplier-list" id="active-suppliers-list">
+                            <div style="color:#64748b; font-size:0.875rem;">جاري تحميل الموردين...</div>
+                        </div>
+
+                        <div class="update-box">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <div class="update-content">
+                                <h4>تحديثات الموردين</h4>
+                                <p>تأكد من مراجعة عقود الموردين في لوحة التحكم.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Column -->
+                    <div class="data-col">
+
+                        <!-- Register Form -->
+                        <div class="register-card">
+                            <div class="register-header">
+                                <h3>تسجيل شحنة جديدة</h3>
+                                <i class="fa-solid fa-expand expand-icon"></i>
+                            </div>
+                            <form id="import-form">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label style="display: flex; justify-content: space-between;">
+                                            <span>وصف الصنف</span>
+                                            <span id="item-stock-display"
+                                                style="color: #3b82f6; font-size: 0.8rem; font-weight: normal;"></span>
+                                        </label>
+                                        <select id="imp-item" required>
+                                            <option value="">اختر صنف...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>المخزن المستهدف</label>
+                                        <select id="imp-warehouse" required>
+                                            <option value="">اختر مخزن...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>المورد</label>
+                                        <select id="imp-supplier" required>
+                                            <option value="">اختر من القائمة...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الوحدة</label>
+                                        <select id="imp-unit" required>
+                                            <option value="BASE" data-factor="1">الوحدة الأساسية</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الكمية</label>
+                                        <input type="number" id="imp-qty" required min="1" placeholder="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="display:flex; align-items:center; gap:6px;">سعر الوحدة (ج.م) <span title="سيتم تحديث السعر الرئيسي للمنتج تلقائياً" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#3b82f6;color:white;border-radius:50%;font-size:0.65rem;cursor:help;font-weight:700;">?</span></label>
+                                        <input type="number" id="imp-price" required min="0.01" step="0.01"
+                                            placeholder="0.00">
+                                        <div style="font-size:0.75rem; color:#3b82f6; margin-top:4px; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-rotate" style="font-size:0.7rem;"></i> سيتم تحديث السعر الرئيسي للمنتج تلقائياً</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>رقم التشغيلة</label>
+                                        <input type="text" id="imp-batch" placeholder="اختياري">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>تاريخ الصلاحية</label>
+                                        <input type="date" id="imp-expiry">
+                                    </div>
+                                    <div class="form-group">
+                                        <label title="الكمية التي يتم عندها تفعيل التنبيه الأحمر">حد التنبيه للكمية</label>
+                                        <input type="number" id="imp-qty-threshold" min="0" value="20" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label title="عدد الأشهر قبل انتهاء الصلاحية لتفعيل التنبيه">التنبيه قبل انتهاء الصلاحية (أشهر)</label>
+                                        <input type="number" id="imp-expiry-threshold" min="0" value="3" required>
+                                    </div>
+                                </div>
+                                <div style="display:flex; justify-content: flex-end;">
+                                    <button type="submit" class="btn-add-manifest" id="btn-submit">
+                                        <i class="fa-solid fa-plus"></i> إضافة إلى القائمة
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Staging Table -->
+                        <div class="log-card" style="margin-top: 1rem; border-top: 4px solid #3b82f6;">
+                            <div class="log-header">
+                                <h3>قائمة المنتجات للشحنة الحالية</h3>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="log-table">
+                                    <thead>
+                                        <tr>
+                                            <th>المنتج</th>
+                                            <th>المخزن</th>
+                                            <th>الكمية</th>
+                                            <th>سعر الوحدة</th>
+                                            <th>الإجمالي</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="staging-table-body">
+                                        <tr>
+                                            <td colspan="6" style="text-align: center; color: #64748b;">لا توجد منتجات مضافة بعد</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                                                        <div style="padding: 1rem; border-top: 1px solid #e2e8f0;">
+                                <!-- ── Invoice Image Upload ── -->
+                                <div style="margin-bottom: 0.75rem;">
+                                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:#334155;font-size:0.875rem;margin-bottom:6px;">
+                                        <i class="fa-solid fa-file-image" style="color:#3b82f6;"></i>
+                                        صورة الفاتورة
+                                        <span style="font-weight:400;color:#94a3b8;font-size:0.8rem;">(اختياري — JPEG, PNG, WebP)</span>
+                                    </label>
+                                    <label for="invoice-image-input" style="display:block;cursor:pointer;">
+                                        <div style="border:2px dashed #cbd5e1;border-radius:10px;padding:14px;text-align:center;transition:border-color .2s;background:#f8fafc;"
+                                             onmouseover="this.style.borderColor='#3b82f6'"
+                                             onmouseout="this.style.borderColor='#cbd5e1'">
+                                            <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.5rem;color:#94a3b8;display:block;margin-bottom:4px;"></i>
+                                            <span style="font-size:0.8rem;color:#64748b;">اضغط لاختيار صورة الفاتورة</span>
+                                        </div>
+                                    </label>
+                                    <input type="file" id="invoice-image-input" accept="image/*"
+                                           style="display:none;" onchange="updateInvoicePreview()">
+                                    <div id="invoice-preview-area" style="display:none;"></div>
+                                </div>
+
+                                <!-- ── Total + Confirm ── -->
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>إجمالي الشحنة: </strong>
+                                        <span id="staging-total-value" style="font-weight:bold; color: #16a34a;">$0.00</span>
+                                    </div>
+                                    <button id="btn-confirm-shipment" class="btn-add-manifest"
+                                            style="background:#10b981; border:none; display:none;" onclick="submitShipment()">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> تأكيد وحفظ الشحنة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Import Log Table -->
+                        <div class="log-card">
+                            <div class="log-header">
+                                <h3>سجل الوارد الحالي <span class="live-badge">مباشر</span></h3>
+                                <div class="log-actions">
+                                    <button class="icon-btn-outline"><i class="fa-solid fa-filter"></i></button>
+                                    <button class="icon-btn-outline"><i class="fa-solid fa-download"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table class="log-table">
+                                    <thead>
+                                        <tr>
+                                            <th>تفاصيل الصنف</th>
+                                            <th>الكمية / السعر</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="import-log-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align:center; color:#64748b;">جاري تحميل السجل...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="table-footer">
+                                <div id="table-entries-info">عرض المدخلات</div>
+                                <div class="pagination">
+                                    <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                                    <button class="page-btn active">1</button>
+                                    <button class="page-btn">2</button>
+                                    <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Bottom Strip -->
+            <div class="bot-strip">
+                <div class="strip-item">
+                    <span>الميزان التجاري</span>
+                </div>
+                <div class="strip-item">
+                    <strong id="strip-in">$0 وارد</strong>
+                    <div class="bar-wrap">
+                        <div class="bar-fill blue"></div>
+                        <div class="bar-fill gray"></div>
+                    </div>
+                    <strong>$0 صادر</strong>
+                </div>
+                <div class="strip-item" style="margin-left:auto;">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span id="strip-active">0 شحنات نشطة</span>
+                </div>
+                <div class="strip-item">
+                    <div class="dot-status"></div>
+                    النظام يعمل
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Return to Supplier Modal -->
+    <div id="return-import-modal" class="modal-overlay"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-content"
+            style="background: white; border-radius: 8px; width: 90%; max-width: 500px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 style="margin: 0; color: #1e293b; font-size: 1.25rem;">إرجاع للمورد</h3>
+                <button onclick="closeImportReturnModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; color: #475569;">
+                    إرجاع أصناف للوارد رقم #<span id="return-import-id-display" style="font-weight: bold;"></span>
+                </p>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 5px; color: #334155;">الكمية المراد إرجاعها</label>
+                    <input type="number" id="import-return-qty"
+                        style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" min="1">
+                    <small id="import-return-max-helper"
+                        style="color: #64748b; display: block; margin-top: 5px;"></small>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 5px; color: #334155;">سبب الإرجاع</label>
+                    <input type="text" id="import-return-reason" placeholder="سبب اختياري..."
+                        style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </div>
+            </div>
+
+            <div class="modal-footer"
+                style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                <button onclick="closeImportReturnModal()"
+                    style="padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; color: #475569; cursor: pointer; font-weight: 500;">إلغاء</button>
+                <button id="submit-import-return-btn" onclick="submitImportReturn()"
+                    style="padding: 8px 16px; border: none; background: #ef4444; color: white; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                    <i class="fa-solid fa-rotate-left"></i> تأكيد الإرجاع
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/uom_utils.js"></script>
+    <script src="js/import.js"></script>
+</body>
+
+</html>

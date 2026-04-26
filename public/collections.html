@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التحصيلات والمديونيات | مركز القدس</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Choices.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/collections.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- TOP NAVBAR -->
+        <header class="global-header">
+            <div class="header-content">
+                <div class="header-title">التحصيلات والمديونيات - مركز القدس 2</div>
+            </div>
+            <a href="index.html" class="home-btn">
+                <i class="fa-solid fa-house"></i> العودة للوحة التحكم
+            </a>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <div class="main-content-layout">
+            
+            <!-- RIGHT AREA: PAYMENT FORM -->
+            <div class="content-right">
+                <div class="card form-card">
+                    <div class="card-title">
+                        <i class="fa-solid fa-money-bill-transfer"></i> تسجيل تحصيل من عميل
+                    </div>
+                    
+                    <div class="form-body">
+                        <div class="form-group">
+                            <label>اختر العميل (صيدلية أو دكتور)</label>
+                            <select id="client-select">
+                                <option value="" disabled selected>ابحث عن اسم العميل...</option>
+                            </select>
+                        </div>
+
+                        <!-- Smart Balance Box -->
+                        <div class="balance-box" id="balance-box">
+                            <div class="balance-label">الرصيد الحالي</div>
+                            <div class="balance-amount" id="balance-amount">0.00 د.أ</div>
+                            <div class="balance-badge" id="balance-badge">اختر عميل</div>
+
+                            <!-- Credit Limit Container -->
+                            <div class="credit-limit-container" id="credit-limit-container" style="display: none;">
+                                <div class="credit-label-row">
+                                    <span>استهلاك الحد الائتماني</span>
+                                    <span id="credit-percent-text">0%</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="credit-progress-fill"></div>
+                                </div>
+                                <div class="credit-warning-msg" id="credit-warning-msg"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-row split-form">
+                            <div class="form-group flex-1">
+                                <label>المبلغ المدفوع</label>
+                                <input type="number" id="paid-amount" min="1" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-group flex-1">
+                                <label>طريقة الدفع</label>
+                                <select id="payment-method">
+                                    <option value="كاش">كاش</option>
+                                    <option value="بنك">بنك / تحويل</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>ملاحظات إضافية</label>
+                            <textarea id="payment-notes" rows="2" placeholder="أدخل أي ملاحظات حول الدفعة..."></textarea>
+                        </div>
+
+                        <button class="btn-primary btn-save" onclick="savePayment()">
+                            <i class="fa-solid fa-plus"></i> حفظ الدفعة
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Example Credit State Placeholder -->
+                <div class="credit-example-card">
+                    <div class="example-text">
+                        <span>مثال حالة الرصيد الدائن (Credit)</span>
+                        <span class="positive-balance">+ 340.50</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEFT AREA: HISTORY & SUMMARY -->
+            <div class="content-left">
+                <!-- HISTORY TABLE -->
+                <div class="card history-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-clock-rotate-left"></i> سجل المدفوعات الأخيرة
+                        </div>
+                        <button class="icon-btn-text" onclick="loadHistory(true)">عرض الكل</button>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>اسم العميل</th>
+                                    <th>التاريخ</th>
+                                    <th>المبلغ</th>
+                                    <th>طريقة الدفع</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: #64748b;">جاري تحميل البيانات...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="pagination-wrap">
+                        <button class="page-btn active">1</button>
+                    </div>
+                </div>
+
+                <!-- SUMMARY CARDS -->
+                <div class="summary-cards">
+                    <div class="summary-card daily-collections">
+                        <div class="summary-label">إجمالي تحصيلات الشهر</div>
+                        <div class="summary-value" id="monthly-collections-val">0.00 د.أ</div>
+                    </div>
+                    <div class="summary-card market-debt">
+                        <div class="summary-label">إجمالي المديونيات في السوق</div>
+                        <div class="summary-value" id="market-debt-val">0.00 د.أ</div>
+                    </div>
+                    <div class="summary-card client-monthly">
+                        <div class="summary-label">تحصيلات العميل هذا الشهر</div>
+                        <div class="summary-value" id="client-monthly-val">0.00 د.أ</div>
+                    </div>
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Choices.js Script -->
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="js/collections.js"></script>
+</body>
+</html>

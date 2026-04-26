@@ -1,0 +1,13 @@
+CREATE TABLE `client_transactions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) DEFAULT NULL,
+  `pharmacy_id` int(11) DEFAULT NULL,
+  `type` varchar(50) NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `reference_id` int(11) DEFAULT NULL,
+  `date` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `client_id` (`client_id`),
+  KEY `fk_tx_pharmacy` (`pharmacy_id`),
+  CONSTRAINT `fk_tx_pharmacy` FOREIGN KEY (`pharmacy_id`) REFERENCES `pharmacies` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci

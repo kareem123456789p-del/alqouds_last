@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة تكاليف المنتجات | Al-Quds Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-brand { display: flex; align-items: center; gap: 14px; }
+        .header-brand .icon {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 15px rgba(239,68,68,0.4);
+        }
+        .header-brand h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; }
+        .header-brand p  { font-size: 0.85rem; color: #94a3b8; margin-top: 2px; }
+
+        .header-stats {
+            display: flex; gap: 20px;
+        }
+        .stat-pill {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50px;
+            padding: 8px 20px;
+            font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .stat-pill .num { font-weight: 800; font-size: 1.1rem; }
+        .stat-pill.red  .num { color: #f87171; }
+        .stat-pill.green .num { color: #4ade80; }
+
+        /* ── Main ── */
+        .main { padding: 32px 40px; max-width: 1100px; margin: 0 auto; }
+
+        /* ── Alert Banner ── */
+        .alert-banner {
+            background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.08));
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 28px;
+            display: flex; align-items: center; gap: 14px;
+            color: #fca5a5;
+        }
+        .alert-banner i { font-size: 1.4rem; color: #ef4444; flex-shrink: 0; }
+        .alert-banner strong { color: #f87171; }
+
+        /* ── Search / Filter bar ── */
+        .toolbar {
+            display: flex; gap: 12px; margin-bottom: 20px;
+        }
+        .search-input {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 12px 18px;
+            color: #f1f5f9;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { outline: none; border-color: #3b82f6; background: rgba(59,130,246,0.1); }
+        .search-input::placeholder { color: #64748b; }
+
+        .btn-refresh {
+            background: rgba(59,130,246,0.15);
+            border: 1px solid rgba(59,130,246,0.35);
+            border-radius: 10px;
+            color: #93c5fd;
+            padding: 12px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-refresh:hover { background: rgba(59,130,246,0.3); }
+
+        /* ── Table Card ── */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            backdrop-filter: blur(6px);
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            background: rgba(255,255,255,0.08);
+            padding: 14px 20px;
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            transition: background 0.2s;
+        }
+        tbody tr:hover { background: rgba(255,255,255,0.04); }
+        tbody tr:last-of-type { border-bottom: none; }
+
+        /* Success state */
+        tbody tr.row-success {
+            background: rgba(34,197,94,0.1) !important;
+            border-color: rgba(34,197,94,0.2);
+            animation: fadeSuccess 0.4s ease;
+        }
+        @keyframes fadeSuccess {
+            from { background: rgba(34,197,94,0.35); }
+            to   { background: rgba(34,197,94,0.1); }
+        }
+
+        td {
+            padding: 14px 20px;
+            font-size: 0.95rem;
+            vertical-align: middle;
+        }
+
+        .product-id   { color: #64748b; font-size: 0.82rem; font-weight: 700; }
+        .product-name { font-weight: 600; color: #f1f5f9; }
+        .product-sku  { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+        .badge-zero {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(239,68,68,0.15);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #f87171;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.82rem; font-weight: 700;
+        }
+        .badge-done {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(34,197,94,0.15);
+            border: 1px solid rgba(34,197,94,0.3);
+            color: #4ade80;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.82rem; font-weight: 700;
+        }
+
+        /* Price input + button */
+        .price-cell { display: flex; align-items: center; gap: 8px; }
+        .price-input {
+            width: 130px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: #f1f5f9;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .price-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(59,130,246,0.12);
+        }
+        .price-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-update {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 9px 18px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+        }
+        .btn-update:hover   { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(34,197,94,0.4); }
+        .btn-update:active  { transform: translateY(0); }
+        .btn-update:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ── Empty / Loading states ── */
+        .state-row td {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        .state-row .state-icon { font-size: 3.5rem; display: block; margin-bottom: 16px; }
+        .state-row .state-title { font-size: 1.2rem; font-weight: 700; color: #94a3b8; margin-bottom: 6px; }
+        .state-row .state-sub   { font-size: 0.9rem; }
+
+        /* ── Toast ── */
+        #toast-container {
+            position: fixed; bottom: 24px; left: 24px;
+            display: flex; flex-direction: column; gap: 10px;
+            z-index: 9999;
+        }
+        .toast {
+            display: flex; align-items: center; gap: 12px;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 14px 20px;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease;
+            min-width: 280px;
+        }
+        .toast.success { border-color: rgba(34,197,94,0.4); }
+        .toast.error   { border-color: rgba(239,68,68,0.4); }
+        .toast i { font-size: 1.2rem; }
+        .toast.success i { color: #4ade80; }
+        .toast.error   i { color: #f87171; }
+
+        @keyframes slideIn {
+            from { transform: translateX(-30px); opacity: 0; }
+            to   { transform: translateX(0);     opacity: 1; }
+        }
+
+        /* ── Spinner ── */
+        .spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .back-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: #94a3b8; font-size: 0.9rem; text-decoration: none;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #f1f5f9; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+    <div class="header-brand">
+        <div class="icon"><i class="fa-solid fa-tags"></i></div>
+        <div>
+            <h1>إدارة تكاليف المنتجات</h1>
+            <p>تحديث أسعار التكلفة للمنتجات التي لا تملك بيانات ربحية</p>
+        </div>
+    </div>
+    <div class="header-stats">
+        <div class="stat-pill red">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>منتجات بدون تكلفة:</span>
+            <span class="num" id="count-missing">...</span>
+        </div>
+        <div class="stat-pill green">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>تم تحديثها:</span>
+            <span class="num" id="count-fixed">0</span>
+        </div>
+    </div>
+</header>
+
+<!-- Main -->
+<main class="main">
+
+    <!-- Alert -->
+    <div class="alert-banner">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+            <strong>تنبيه:</strong> المنتجات الموضحة أدناه لديها سعر تكلفة يساوي صفر.
+            هذا يعني أن تقارير PDF ستعرض "<strong>التكلفة غير محددة</strong>" بدلاً من نسبة الربح الحقيقية.
+            أدخل التكلفة الفعلية لكل منتج وانقر <strong>"تحديث"</strong> — سيتم تصحيح جميع المبيعات السابقة أيضاً.
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <input type="text" class="search-input" id="search-input"
+               placeholder="&#x628;&#x62D;&#x62B; &#x639;&#x646; &#x645;&#x646;&#x62A;&#x62C;..."
+               oninput="filterTable()">
+        <button class="btn-refresh" onclick="loadProducts()">
+            <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+            تحديث القائمة
+        </button>
+        <a href="/retail_sales.html" class="back-link">
+            <i class="fa-solid fa-arrow-left"></i> العودة لنقطة البيع
+        </a>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <table id="products-table">
+            <thead>
+                <tr>
+                    <th style="width:60px;">ID</th>
+                    <th>اسم المنتج</th>
+                    <th style="width:160px;">سعر البيع الحالي</th>
+                    <th style="width:200px;">سعر التكلفة الجديد (د.أ)</th>
+                    <th style="width:110px;">الحالة</th>
+                </tr>
+            </thead>
+            <tbody id="products-tbody">
+                <tr class="state-row">
+                    <td colspan="5">
+                        <span class="state-icon"><i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;"></i></span>
+                        <div class="state-title">جاري تحميل البيانات...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+    let fixedCount = 0;
+    let allRows = [];
+
+    // ── Load products ──
+    async function loadProducts() {
+        const icon = document.getElementById('refresh-icon');
+        icon.className = 'fa-solid fa-circle-notch fa-spin';
+
+        try {
+            const res  = await fetch('/api/retail/admin/zero-cost-products');
+            const data = await res.json();
+
+            allRows = data.products || [];
+            document.getElementById('count-missing').textContent = allRows.length;
+            renderTable(allRows);
+        } catch (err) {
+            showToast('فشل تحميل البيانات: ' + err.message, 'error');
+            renderEmpty('خطأ في الاتصال بالخادم');
+        } finally {
+            icon.className = 'fa-solid fa-arrows-rotate';
+        }
+    }
+
+    // ── Render table ──
+    function renderTable(products) {
+        const tbody = document.getElementById('products-tbody');
+
+        if (products.length === 0) {
+            tbody.innerHTML = `
+                <tr class="state-row">
+                    <td colspan="5">
+                        <span class="state-icon">🎉</span>
+                        <div class="state-title">ممتاز! جميع المنتجات لديها تكلفة محددة</div>
+                        <div class="state-sub">تقارير PDF ستعرض نسب الربح الحقيقية الآن</div>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = products.map(p => `
+            <tr id="row-${p.id}" data-name="${p.name.toLowerCase()}">
+                <td><span class="product-id">#${p.id}</span></td>
+                <td>
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-sku">${p.sku ? 'SKU: ' + p.sku : 'بدون باركود'}</div>
+                </td>
+                <td style="text-align:center; font-weight:700; color:#94a3b8;">
+                    ${Number(p.price || 0).toFixed(2)} د.أ
+                </td>
+                <td>
+                    <div class="price-cell">
+                        <input type="number" class="price-input" id="cost-${p.id}"
+                               min="0.01" step="0.01" placeholder="0.00"
+                               onkeydown="if(event.key==='Enter') updatePrice(${p.id})">
+                        <button class="btn-update" id="btn-${p.id}" onclick="updatePrice(${p.id})">
+                            <i class="fa-solid fa-floppy-disk"></i> تحديث
+                        </button>
+                    </div>
+                </td>
+                <td id="status-${p.id}">
+                    <span class="badge-zero"><i class="fa-solid fa-circle-xmark"></i> بدون تكلفة</span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function renderEmpty(msg) {
+        document.getElementById('products-tbody').innerHTML = `
+            <tr class="state-row">
+                <td colspan="5">
+                    <span class="state-icon"><i class="fa-solid fa-server" style="color:#ef4444;"></i></span>
+                    <div class="state-title">${msg}</div>
+                    <div class="state-sub">تحقق من تشغيل الخادم وحاول مرة أخرى</div>
+                </td>
+            </tr>`;
+    }
+
+    // ── Update a single product's price ──
+    async function updatePrice(productId) {
+        const input = document.getElementById(`cost-${productId}`);
+        const btn   = document.getElementById(`btn-${productId}`);
+        const row   = document.getElementById(`row-${productId}`);
+        const status= document.getElementById(`status-${productId}`);
+
+        const cost = parseFloat(input.value);
+        if (isNaN(cost) || cost <= 0) {
+            input.style.borderColor = '#ef4444';
+            input.focus();
+            setTimeout(() => input.style.borderColor = '', 1500);
+            showToast('يرجى إدخال قيمة أكبر من صفر', 'error');
+            return;
+        }
+
+        // Loading state
+        input.disabled = true;
+        btn.disabled   = true;
+        btn.innerHTML  = '<span class="spinner"></span> جاري...';
+
+        try {
+            const res  = await fetch('/api/retail/admin/fix-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, purchase_price: cost })
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Server error');
+
+            // Visual success
+            status.innerHTML = `<span class="badge-done"><i class="fa-solid fa-circle-check"></i> تم التحديث</span>`;
+            row.classList.add('row-success');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> تم';
+            btn.style.background = 'linear-gradient(135deg, #4ade80, #22c55e)';
+
+            // Update counter
+            fixedCount++;
+            document.getElementById('count-fixed').textContent = fixedCount;
+            document.getElementById('count-missing').textContent =
+                Math.max(0, parseInt(document.getElementById('count-missing').textContent) - 1);
+
+            showToast(`✅ تم تحديث تكلفة "${row.querySelector('.product-name').textContent}" إلى ${cost.toFixed(2)} د.أ — وتصحيح ${data.message.match(/\d+/g)?.[1] || 0} سجل مبيعات سابق`, 'success');
+
+            // Fade out after 2.5s
+            setTimeout(() => {
+                row.style.transition = 'opacity 0.5s, transform 0.5s';
+                row.style.opacity    = '0';
+                row.style.transform  = 'translateX(20px)';
+                setTimeout(() => row.remove(), 500);
+            }, 2500);
+
+        } catch (err) {
+            // Reset on failure
+            input.disabled = false;
+            btn.disabled   = false;
+            btn.innerHTML  = '<i class="fa-solid fa-floppy-disk"></i> تحديث';
+            showToast('فشل التحديث: ' + err.message, 'error');
+        }
+    }
+
+    // ── Filter rows ──
+    function filterTable() {
+        const q = document.getElementById('search-input').value.toLowerCase();
+        document.querySelectorAll('#products-tbody tr[data-name]').forEach(row => {
+            row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+        });
+    }
+
+    // ── Toast notifications ──
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <i class="fa-solid fa-${type === 'success' ? 'circle-check' : 'circle-xmark'}"></i>
+            <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.4s, transform 0.4s';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-20px)';
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
+    }
+
+    // ── Init ──
+    loadProducts();
+</script>
+</body>
+</html>

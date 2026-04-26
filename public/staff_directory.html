@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الموظفين | مركز القدس</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/staff.css">
+</head>
+
+<body>
+    <div class="staff-page">
+
+        <!-- ── TOP NAV ── -->
+        <header class="staff-topnav">
+            <div class="nav-right">
+                <div class="title-area">إدارة الموظفين</div>
+                <button class="bell-btn"><i class="fa-regular fa-bell"></i></button>
+            </div>
+
+            <div class="top-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="staff-search" placeholder="بحث عن موظف ...">
+            </div>
+
+            <div class="brand">
+                <span>مركز القدس</span>
+                <div class="brand-icon"><i class="fa-solid fa-plus"></i></div>
+            </div>
+        </header>
+
+        <!-- ── BODY ── -->
+        <div class="staff-body">
+
+            <!-- ── SIDEBAR ── -->
+            <nav class="staff-sidebar">
+                <a href="index.html"><i class="fa-solid fa-grid-2"></i> الرئيسية</a>
+                <a href="staff_directory.html" class="active"><i class="fa-solid fa-users"></i> الموظفين</a>
+                <a href="warehouse.html"><i class="fa-solid fa-box"></i> المخزون</a>
+                <a href="orders.html"><i class="fa-solid fa-cash-register"></i> المبيعات</a>
+                <a href="#"><i class="fa-solid fa-gear"></i> الإعدادات</a>
+            </nav>
+
+            <!-- ── MAIN ── -->
+            <main class="staff-main">
+
+                <!-- Stats -->
+                <div class="staff-stats">
+                    <!-- Pending (re-used as On-Leave) -->
+                    <div class="s-card">
+                        <div class="s-card-info">
+                            <div class="s-card-label">طلبات معلقة</div>
+                            <div class="s-card-number" id="stat-leave">—</div>
+                            <div class="s-card-sub orange">تحتاج مراجعة فورية</div>
+                        </div>
+                        <div class="s-card-icon orange">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                    </div>
+
+                    <!-- On duty -->
+                    <div class="s-card">
+                        <div class="s-card-info">
+                            <div class="s-card-label">على رأس العمل</div>
+                            <div class="s-card-number" id="stat-active">—</div>
+                            <div class="s-card-sub blue">المداومة الحالية</div>
+                        </div>
+                        <div class="s-card-icon blue">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="s-card">
+                        <div class="s-card-info">
+                            <div class="s-card-label">إجمالي الموظفين</div>
+                            <div class="s-card-number" id="stat-total">—</div>
+                            <div class="s-card-sub green">↑ 5% من الشهر الماضي</div>
+                        </div>
+                        <div class="s-card-icon red">
+                            <i class="fa-solid fa-id-badge"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Panel -->
+                <div class="staff-panel">
+                    <div class="staff-panel-header">
+                        <div class="panel-title">
+                            <h2>قائمة الموظفين</h2>
+                            <p>إدارة وتعديل بيانات جميع العاملين في المركز</p>
+                        </div>
+                        <button class="btn-add-staff" onclick="openAddModal()">
+                            <i class="fa-solid fa-plus"></i> إضافة موظف جديد
+                        </button>
+                    </div>
+
+                    <table class="staff-table">
+                        <thead>
+                            <tr>
+                                <th>الموظف</th>
+                                <th>الدور</th>
+                                <th>بيانات الاتصال</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-tbody">
+                            <tr class="empty-row">
+                                <td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <div class="staff-pagination">
+                        <div class="pagination-info" id="page-info">—</div>
+                        <div class="pagination-controls" id="pagination-controls"></div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ── ADD / EDIT MODAL ── -->
+    <div class="staff-modal-overlay" id="staff-modal" onclick="handleOverlayClick(event)">
+        <div class="staff-modal">
+            <div class="staff-modal-header">
+                <h2><i class="fa-solid fa-user-plus"></i> <span id="modal-title">إضافة موظف جديد</span></h2>
+                <button class="modal-close" onclick="closeAddModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="staff-form" onsubmit="submitStaffForm(event)">
+                <div class="modal-grid">
+                    <div class="form-field full">
+                        <label>الاسم الكامل <span style="color:#ef4444">*</span></label>
+                        <input type="text" id="f-name" required placeholder="مثال: أحمد محمد">
+                    </div>
+                    <div class="form-field">
+                        <label>الدور الوظيفي <span style="color:#ef4444">*</span></label>
+                        <select id="f-role" required>
+                            <option value="admin">مسؤول</option>
+                            <option value="sales">مبيعات</option>
+                            <option value="warehouse">مستودع</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>الحالة</label>
+                        <select id="f-status">
+                            <option value="active">نشط</option>
+                            <option value="leave">إجازة</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" id="f-email" placeholder="name@alquds.com">
+                    </div>
+                    <div class="form-field">
+                        <label>رقم الهاتف</label>
+                        <input type="tel" id="f-phone" placeholder="+970 5XX XXX XXX">
+                    </div>
+                    <div class="form-field">
+                        <label>الراتب الأساسي</label>
+                        <input type="number" id="f-salary" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel-modal" onclick="closeAddModal()">إلغاء</button>
+                    <button type="submit" class="btn-save-modal" id="btn-save-staff">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/staff.js"></script>
+</body>
+
+</html>

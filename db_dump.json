@@ -1,0 +1,152 @@
+{
+  "tables": [
+    "client_transactions",
+    "clients",
+    "doctors",
+    "employee_withdrawals",
+    "import_logs",
+    "local_suppliers",
+    "order_items",
+    "orders",
+    "pharmacies",
+    "products",
+    "staff",
+    "supplier_transactions",
+    "transfer_logs",
+    "warehouse_inventory",
+    "warehouses"
+  ],
+  "clients": [
+    {
+      "id": 1,
+      "name": "Al-Shifa Hospital",
+      "type": "Hospital",
+      "contact_person": "Dr. Ahmed",
+      "phone": "+970 599 123 456",
+      "email": null,
+      "address": "Gaza City, North District",
+      "credit_limit": "60000.00",
+      "total_debt": "45230.50",
+      "created_at": "2026-02-28T19:16:32.000Z"
+    },
+    {
+      "id": 2,
+      "name": "City Care Pharmacy",
+      "type": "Pharmacy",
+      "contact_person": "Mohamed",
+      "phone": "+970 598 234 567",
+      "email": null,
+      "address": "Ramallah Center",
+      "credit_limit": "20000.00",
+      "total_debt": "5200.00",
+      "created_at": "2026-02-28T19:16:32.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Gaza Hope Clinic",
+      "type": "Clinic",
+      "contact_person": "Dr. Sara",
+      "phone": "+970 597 345 678",
+      "email": null,
+      "address": "Gaza Strip",
+      "credit_limit": "10000.00",
+      "total_debt": "0.00",
+      "created_at": "2026-02-28T19:16:32.000Z"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "name": "kareem ali",
+      "specialty": "جراحة عامة",
+      "phone": "01155424966",
+      "email": null,
+      "license_number": null,
+      "status": "active",
+      "location": "الجناح الشرقي",
+      "created_at": "2026-02-26T02:24:46.000Z",
+      "credit_limit": "60000.00",
+      "total_debt": "660.00"
+    },
+    {
+      "id": 3,
+      "name": "ramez",
+      "specialty": "طب أطفال",
+      "phone": "016478474749",
+      "email": null,
+      "license_number": null,
+      "status": "active",
+      "location": "الجناح الشرقي",
+      "created_at": "2026-02-27T21:12:32.000Z",
+      "credit_limit": "60000.00",
+      "total_debt": "23665.00"
+    },
+    {
+      "id": 4,
+      "name": "احمد سيلمان",
+      "specialty": "جراحة عامة",
+      "phone": "0224575643",
+      "email": null,
+      "license_number": null,
+      "status": "active",
+      "location": "الجناح الشرقي",
+      "created_at": "2026-02-28T22:01:28.000Z",
+      "credit_limit": "60000.00",
+      "total_debt": "5640.00"
+    },
+    {
+      "id": 5,
+      "name": "mody bahh",
+      "specialty": "طب أطفال",
+      "phone": "01012345678",
+      "email": null,
+      "license_number": null,
+      "status": "active",
+      "location": "الجناح الشرقي",
+      "created_at": "2026-03-01T17:37:32.000Z",
+      "credit_limit": "60000.00",
+      "total_debt": "4802.00"
+    }
+  ],
+  "pharms": [
+    {
+      "id": 3,
+      "name": "Al-Shifa Drugstore",
+      "license_number": "LIC-2024-0012",
+      "contact_person": "Mr. Omar Khaled",
+      "area": "Hebron, Old City",
+      "phone": "+972 59 555 1212",
+      "email": "sales@alshifa.com",
+      "status": "pending",
+      "credit_limit": "15000.00",
+      "total_debt": "7360.00",
+      "created_at": "2026-02-28T23:10:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "Life Plus Pharmacy",
+      "license_number": "LIC-2021-5582",
+      "contact_person": "Dr. Reem Ali",
+      "area": "Bethlehem, Manger St.",
+      "phone": "+972 56 222 3344",
+      "email": "admin@lifeplus.ps",
+      "status": "suspended",
+      "credit_limit": "10000.00",
+      "total_debt": "9500.00",
+      "created_at": "2026-02-28T23:10:00.000Z"
+    },
+    {
+      "id": 5,
+      "name": "modyy",
+      "license_number": "677",
+      "contact_person": "mohamed",
+      "area": "alsile",
+      "phone": "02756584",
+      "email": null,
+      "status": "active",
+      "credit_limit": "20000.00",
+      "total_debt": "155.00",
+      "created_at": "2026-02-28T23:29:35.000Z"
+    }
+  ]
+}

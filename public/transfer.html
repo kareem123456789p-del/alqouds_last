@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Console | Al-Quds Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/transfer.css">
+</head>
+
+<body>
+
+    <div class="transfer-shell">
+
+        <!-- ── Left Sidebar Navigation ── -->
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-truck-medical"></i></div>
+                <div>
+                    <div class="brand-text">Al-Quds Center</div>
+                    <div class="brand-sub">B2B Management Console</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-gauge-high"></i> Dashboard
+                </a>
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-boxes-stacked"></i> Inventory
+                </a>
+                <a class="nav-item active" href="transfer.html">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Transfer Console
+                </a>
+                <a class="nav-item" href="suppliers.html">
+                    <i class="fa-solid fa-store"></i> Local Suppliers
+                </a>
+                <a class="nav-item" href="withdrawals.html">
+                    <i class="fa-solid fa-hand-holding-dollar"></i> Withdrawals
+                </a>
+                <a class="nav-item" href="#">
+                    <i class="fa-solid fa-chart-bar"></i> Analytics
+                </a>
+                <a class="nav-item" href="#">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+            
+                <a class="nav-link" href="retail_sales.html" style="color:#0ea5e9; font-weight: bold;">
+                    <i class="fa-solid fa-cash-register"></i> مبيعات الجمهور (POS)
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="system-health">
+                    <div class="health-dot"></div>
+                    SYSTEM HEALTH · All nodes active
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── Main Area ── -->
+        <div class="transfer-main">
+
+            <!-- Top Bar -->
+            <header class="transfer-topbar">
+                <div class="topbar-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search inventory, SKUs, or warehouses...">
+                </div>
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <div class="user-chip">
+                        <div class="user-avatar">AU</div>
+                        Admin User <span style="font-size:0.7rem;color:#9ca3af;margin-left:4px">SUPER ADMIN</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Transfer Body: Content + Right Panel -->
+            <div class="transfer-body">
+
+                <!-- ── Main Scrollable Content ── -->
+                <main class="transfer-content">
+
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <h1>Transfer Console</h1>
+                        <p>Efficiently manage and relocate medical supplies across your warehouse network.</p>
+                    </div>
+
+                    <!-- STEP 1: Source Warehouse -->
+                    <div class="step-label">
+                        <div class="step-num">1</div>
+                        <span>Step 1: Select Source Warehouse</span>
+                    </div>
+
+                    <div class="warehouse-grid" id="warehouse-grid">
+                        <!-- Skeleton loading cards -->
+                        <div class="warehouse-card skeleton" style="height:140px"></div>
+                        <div class="warehouse-card skeleton" style="height:140px"></div>
+                        <div class="warehouse-card skeleton" style="height:140px"></div>
+                    </div>
+
+                    <!-- STEP 2: Items Table -->
+                    <div class="step2-header">
+                        <div class="step-label" style="margin-bottom:0">
+                            <div class="step-num">2</div>
+                            <span>Step 2: Select Items and Quantities</span>
+                        </div>
+                        <div class="step2-header-right">
+                            <span style="display:flex;align-items:center;gap:0.3rem;cursor:pointer">
+                                <i class="fa-solid fa-filter"></i> Filter
+                            </span>
+                            <span style="display:flex;align-items:center;gap:0.3rem;cursor:pointer">
+                                <i class="fa-solid fa-sort"></i> Sort
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="items-table-container">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px">
+                                        <input type="checkbox" class="item-checkbox" id="select-all-items"
+                                            title="Select All">
+                                    </th>
+                                    <th>Item Name</th>
+                                    <th>SKU</th>
+                                    <th>Available QTY</th>
+                                    <th>Transfer QTY</th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-tbody">
+                                <tr>
+                                    <td colspan="5" class="table-empty-state">
+                                        <i class="fa-solid fa-warehouse"></i>
+                                        <p>Select a source warehouse above to view its inventory.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="table-footer" id="table-footer">
+                            <span id="table-info" style="color:#9ca3af">No warehouse selected</span>
+                            <div class="pagination-controls" id="pagination-controls"></div>
+                        </div>
+                    </div>
+
+                </main>
+
+                <!-- ── Right Sidebar Panel ── -->
+                <aside class="transfer-sidebar">
+
+                    <!-- STEP 3: Destination -->
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">Step 3: Destination</div>
+                        <label class="dest-label" for="dest-warehouse">Target Warehouse</label>
+                        <select class="dest-select" id="dest-warehouse">
+                            <option value="">— Select Target Warehouse —</option>
+                        </select>
+                    </div>
+
+                    <!-- IMPORT SECTION (intentionally left empty as placeholder) -->
+                    <div class="import-placeholder">
+                        <div class="sidebar-section-title">Import</div>
+                        <div class="import-placeholder-box">
+                            <i class="fa-solid fa-file-import"></i>
+                            Coming Soon
+                        </div>
+                    </div>
+
+                    <!-- Transfer Summary -->
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">Transfer Summary</div>
+                        <div class="summary-row">
+                            <span class="summary-key">Items Selected</span>
+                            <span class="summary-val" id="summary-items">0 Types</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Total Units</span>
+                            <span class="summary-val" id="summary-units">0 Units</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">From Warehouse</span>
+                            <span class="summary-val" id="summary-from" style="color:#9ca3af;font-weight:500">None
+                                selected</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">To Warehouse</span>
+                            <span class="summary-val" id="summary-to" style="color:#9ca3af;font-weight:500">None
+                                selected</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="sidebar-actions">
+                        <button class="btn-confirm" id="btn-confirm" disabled onclick="confirmTransfer()">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Confirm Transfer Now
+                        </button>
+                        <button class="btn-draft" onclick="saveDraft()">Save as Draft</button>
+                    </div>
+
+                </aside>
+            </div><!-- /.transfer-body -->
+        </div><!-- /.transfer-main -->
+    </div><!-- /.transfer-shell -->
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/transfer.js"></script>
+</body>
+
+</html>

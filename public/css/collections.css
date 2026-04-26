@@ -1,0 +1,402 @@
+/* layouts.css provides .app-layout, .main-content-layout, .content-right, .content-left overrides */
+
+body {
+    background-color: #f1f5f9;
+}
+
+/* Header Override */
+.global-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+    padding: 15px 32px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    width: 100%;
+    box-sizing: border-box;
+    height: 60px;
+}
+.header-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+.home-btn {
+    background: transparent;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.main-content-layout {
+    display: flex;
+    gap: 24px;
+    padding: 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+    /* Reverse flex to put form on right (in RTL context, content-right might naturally be on the right, but standard layout.css is probably row) */
+}
+
+.content-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 350px;
+}
+
+.content-left {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    padding: 24px;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.card-title i {
+    color: #0284c7;
+}
+
+/* Form Styles */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.form-group label {
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 600;
+}
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+    padding: 10px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: #f8fafc;
+}
+.split-form {
+    display: flex;
+    gap: 16px;
+}
+.flex-1 { flex: 1; }
+
+.btn-save {
+    background: #0284c7;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Choices JS Override for unified look */
+.choices { margin-bottom: 0; }
+.choices__inner {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    min-height: 44px;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+}
+.choices[data-type*="select-one"] .choices__input {
+    background-color: transparent;
+}
+
+/* Smart Balance Box */
+.balance-box {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+.balance-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+.balance-amount {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    direction: ltr; /* keep numbers readable */
+}
+.balance-badge {
+    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Red / Green States */
+.balance-box.debt-state {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+.balance-box.debt-state .balance-amount {
+    color: #dc2626;
+}
+.balance-box.debt-state .balance-badge {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.balance-box.credit-state {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+.balance-box.credit-state .balance-amount {
+    color: #16a34a;
+}
+.balance-box.credit-state .balance-badge {
+    background: #bbf7d0;
+    color: #166534;
+}
+
+/* Credit Limit Integrations */
+.credit-limit-container {
+    width: 100%;
+    margin-top: 20px;
+    text-align: right;
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 15px;
+}
+.credit-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+}
+.progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    /* Default base color falling back */
+    background: #0ea5e9;
+    transition: width 0.3s ease, background 0.3s ease;
+    width: 0%;
+}
+.progress-bar-fill.green-alert {
+    background: #10b981; /* Green */
+}
+.progress-bar-fill.orange-alert {
+    background: #f97316; /* Orange */
+}
+.progress-bar-fill.yellow-alert {
+    background: #f59e0b; /* Fallback yellow */
+}
+.progress-bar-fill.red-alert {
+    background: #ef4444; /* Red */
+}
+.credit-warning-msg {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 8px;
+    display: none;
+}
+.credit-warning-msg.orange-alert {
+    color: #c2410c;
+    display: block;
+}
+.credit-warning-msg.yellow-alert {
+    color: #d97706;
+    display: block;
+}
+.credit-warning-msg.red-alert {
+    color: #dc2626;
+    display: block;
+}
+
+/* Example Credit Box */
+.credit-example-card {
+    background: #f1f5f9;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+}
+.example-text {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+.positive-balance {
+    color: #16a34a;
+    font-weight: 700;
+    font-size: 1rem;
+    direction: ltr;
+}
+
+/* History Table */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.icon-btn-text {
+    background: none;
+    border: none;
+    color: #0284c7;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.data-table th {
+    text-align: right;
+    padding: 12px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.data-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    font-size: 0.9rem;
+}
+.badge-pay {
+    background: #e2e8f0;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: #475569;
+}
+.badge-pay.cash {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+.badge-pay.bank {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.pagination-wrap {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+.page-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    color: #475569;
+}
+.page-btn.active {
+    background: #0284c7;
+    color: white;
+    border-color: #0284c7;
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: flex;
+    gap: 20px;
+}
+.summary-card {
+    flex: 1;
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    border-right: 4px solid #e2e8f0; /* RTL context */
+}
+.daily-collections {
+    background: #ecfdf5;
+    border-right-color: #10b981;
+}
+.daily-collections .summary-value {
+    color: #059669;
+}
+.market-debt {
+    background: #fef2f2;
+    border-right-color: #ef4444;
+}
+.market-debt .summary-value {
+    color: #dc2626;
+}
+.client-monthly {
+    background: #eff6ff;
+    border-right-color: #3b82f6;
+}
+.client-monthly .summary-value {
+    color: #2563eb;
+}
+.summary-label {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.summary-value {
+    font-size: 2rem;
+    font-weight: 800;
+}

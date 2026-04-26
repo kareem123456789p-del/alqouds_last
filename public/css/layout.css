@@ -1,0 +1,325 @@
+/* Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Cairo', sans-serif;
+    background-color: #f8faff;
+    color: #334155;
+    direction: rtl;
+    text-align: right;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Sidebar removed */
+
+/* Main Content */
+.main-content {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header / Top Bar */
+.top-bar {
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.page-title h1 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.breadcrumbs {
+    font-size: 0.875rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+}
+
+.top-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.search-bar {
+    position: relative;
+    width: 300px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    /* Flip padding for icon */
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background-color: #f8fafc;
+    color: #475569;
+    font-family: inherit;
+}
+
+.search-bar i {
+    position: absolute;
+    right: 10px;
+    /* Flip icon position */
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+    padding: 0.6rem 1.25rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+/* Dashboard Content Area */
+.dashboard-scroll {
+    flex: 1;
+    padding: 2rem;
+}
+
+/* Welcome Banner */
+.welcome-banner {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.welcome-text h2 {
+    font-size: 1.25rem;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+}
+
+.welcome-text p {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.date-badge {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    color: #475569;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Card Grid */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.nav-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* Maintain logical start alignment in RTL */
+    height: 160px;
+}
+
+.nav-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Warehouse Card – special clickable highlight ── */
+.nav-card.warehouse-card {
+    border: 1px solid #bfdbfe;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-card.warehouse-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius: 0 0 12px 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.nav-card.warehouse-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.18);
+    border-color: #3b82f6;
+}
+
+.nav-card.warehouse-card:hover::after {
+    opacity: 1;
+}
+
+.nav-card.warehouse-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s;
+}
+
+.card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.nav-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.nav-card p {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* ── Linked Dashboard Cards (e.g. Suppliers, Warehouse) ── */
+.nav-card--linked {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-card--linked::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 0 0 12px 12px;
+    background: linear-gradient(90deg, #ca8a04, #fbbf24);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+/* Suppliers card gets golden accent */
+.nav-card--linked:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(202, 138, 4, 0.18);
+    border-color: #fbbf24;
+}
+
+.nav-card--linked:hover::after {
+    opacity: 1;
+}
+
+.nav-card--linked:active {
+    transform: scale(0.98);
+    transition: transform 0.1s;
+}
+
+/* Warehouse-linked card keeps blue accent */
+.nav-card--linked[href="warehouse.html"]:hover {
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.18);
+    border-color: #3b82f6;
+}
+
+.nav-card--linked[href="warehouse.html"]::after {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+/* ── Live Count Badge ── */
+.card-live-count {
+    display: inline-block;
+    margin-right: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ca8a04;
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    border-radius: 20px;
+    padding: 0.05rem 0.4rem;
+    vertical-align: middle;
+    margin-top: 2px;
+}
+
+/* ── Withdrawals card – green accent ── */
+.nav-card--linked[href="withdrawals.html"]:hover {
+    box-shadow: 0 8px 24px rgba(21, 128, 61, 0.18);
+    border-color: #16a34a;
+}
+
+.nav-card--linked[href="withdrawals.html"]::after {
+    background: linear-gradient(90deg, #15803d, #4ade80);
+}
+
+/* Import card – blue-green accent ── */
+.nav-card--linked[href="import.html"]:hover {
+    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.18);
+    border-color: #059669;
+}
+
+.nav-card--linked[href="import.html"]::after {
+    background: linear-gradient(90deg, #059669, #34d399);
+}

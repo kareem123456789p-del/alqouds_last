@@ -1,0 +1,27 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Database backup (do not commit to git)
+
+
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Uploads & temp files
+public/uploads/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+
+public/js/amiri_font.js
+
+database_backup.sql

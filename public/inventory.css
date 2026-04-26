@@ -1,0 +1,272 @@
+/* Inventory Top Stats Cards */
+.inv-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.inv-stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+    border-right: 4px solid transparent;
+    /* RTL border */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 140px;
+}
+
+.inv-stat-card.blue {
+    border-right-color: #3b82f6;
+}
+
+/* Global */
+.inv-stat-card.red {
+    border-right-color: #ef4444;
+}
+
+/* Expired/Urgent */
+.inv-stat-card.orange {
+    border-right-color: #f97316;
+}
+
+/* Low Stock */
+.inv-stat-card.green {
+    border-right-color: #22c55e;
+}
+
+/* Value */
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-tag {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    /* RTL flip */
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.inv-stat-card.blue .stat-tag {
+    color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.inv-stat-card.red .stat-tag {
+    color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.inv-stat-card.orange .stat-tag {
+    color: #f97316;
+    background-color: #fff7ed;
+}
+
+.inv-stat-card.green .stat-tag {
+    color: #22c55e;
+    background-color: #f0fdf4;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+/* Filter Bar */
+.filter-bar {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+}
+
+.search-input-group {
+    flex: 1;
+    position: relative;
+    min-width: 200px;
+}
+
+.search-input-group input {
+    width: 100%;
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background-color: #f8fafc;
+}
+
+.search-input-group i {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.filter-select {
+    padding: 0.6rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #475569;
+    min-width: 140px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    padding: 0.6rem 1rem;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+    background-color: #f8fafc;
+}
+
+/* Inventory Table */
+.inv-table-container {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+
+.inv-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.inv-table th {
+    background-color: #f8fafc;
+    padding: 1rem;
+    text-align: right;
+    /* RTL */
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #64748b;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.inv-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.item-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.item-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.item-details h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.item-details span {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* Status Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-available {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.badge-low {
+    background-color: #ffedd5;
+    color: #9a3412;
+}
+
+.badge-out {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-icon-only {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.btn-icon-only:hover {
+    color: #334155;
+}
+
+/* Pagination */
+.pagination {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+}

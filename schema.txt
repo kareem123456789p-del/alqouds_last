@@ -1,0 +1,9 @@
+CREATE TABLE `warehouse_inventory` (
+  `warehouse_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `current_stock` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`warehouse_id`,`product_id`),
+  KEY `product_id` (`product_id`),
+  CONSTRAINT `warehouse_inventory_ibfk_1` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `warehouse_inventory_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci

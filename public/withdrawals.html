@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Withdrawals | Al-Quds Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/withdrawals.css">
+</head>
+
+<body>
+    <div class="wd-shell">
+
+        <!-- ── Left Sidebar ── -->
+        <aside class="wd-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-truck-medical"></i></div>
+                <div>
+                    <div class="brand-name">Al-Quds Center</div>
+                    <div class="brand-sub">WAREHOUSE MANAGEMENT</div>
+                </div>
+            </div>
+
+            <div class="sidebar-menu-label">MAIN MENU</div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-table-cells-large"></i> Dashboard
+                </a>
+                <a class="nav-item" href="warehouse.html">
+                    <i class="fa-solid fa-box-archive"></i> Inventory
+                </a>
+                <a class="nav-item" href="import.html">
+                    <i class="fa-solid fa-file-arrow-down"></i> Supplies
+                </a>
+                <a class="nav-item active" href="withdrawals.html">
+                    <i class="fa-solid fa-hand-holding-dollar"></i> Withdrawals
+                </a>
+                <a class="nav-item" href="staff_directory.html">
+                    <i class="fa-solid fa-users"></i> Staff
+                </a>
+            
+                <a class="nav-link" href="retail_sales.html" style="color:#0ea5e9; font-weight: bold;">
+                    <i class="fa-solid fa-cash-register"></i> مبيعات الجمهور (POS)
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="user-profile">
+                    <div class="user-avatar">AU</div>
+                    <div class="user-info">
+                        <div class="user-name">Admin User</div>
+                        <div class="user-role">System Manager</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── Main Area ── -->
+        <main class="wd-main">
+
+            <!-- Topbar -->
+            <header class="wd-topbar">
+                <div class="topbar-left">
+                    <h1>Employee Withdrawals</h1>
+                    <p>Manage salary advances and warehouse item withdrawals efficiently.</p>
+                </div>
+                <button class="btn-reconcile" id="btn-reconcile">
+                    <i class="fa-solid fa-calculator"></i> 🧾 Reconcile Salaries
+                </button>
+            </header>
+
+            <!-- Body -->
+            <div class="wd-body">
+
+                <!-- ── Stat Cards ── -->
+                <div class="stat-cards">
+                    <!-- Card 1: Total this month -->
+                    <div class="stat-card">
+                        <div class="card-label">
+                            <div class="card-icon blue"><i class="fa-solid fa-chart-bar"></i></div>
+                            TOTAL WITHDRAWALS (MONTH)
+                        </div>
+                        <div class="card-value" id="stat-total">EGP 0</div>
+                        <div class="card-sub" id="stat-total-sub">
+                            <i class="fa-solid fa-arrow-trend-up"></i> Loading...
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Most withdrawals -->
+                    <div class="stat-card">
+                        <div class="card-label">
+                            <div class="card-icon purple"><i class="fa-solid fa-user"></i></div>
+                            MOST WITHDRAWALS
+                        </div>
+                        <div class="card-value purple-val" id="stat-top-name">—</div>
+                        <div class="card-sub neutral-sub" id="stat-top-sub">No transactions this month</div>
+                    </div>
+
+                    <!-- Card 3: Alerts -->
+                    <div class="stat-card">
+                        <div class="card-label">
+                            <div class="card-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            ALERTS (&gt;50% SALARY)
+                        </div>
+                        <div class="card-value orange-val" id="stat-alerts">0 Employees</div>
+                        <div class="card-sub alert-sub" id="stat-alerts-sub" style="display:none;">
+                            <i class="fa-solid fa-circle-exclamation"></i> Immediate review needed
+                        </div>
+                        <div class="card-sub neutral-sub" id="stat-alerts-ok">All within limits</div>
+                    </div>
+                </div>
+
+                <!-- ── Bottom Grid ── -->
+                <div class="wd-grid">
+
+                    <!-- New Withdrawal Form -->
+                    <div class="form-card">
+                        <div class="form-header">
+                            <div class="new-icon"><i class="fa-solid fa-plus"></i></div>
+                            💸 New Withdrawal
+                        </div>
+                        <div class="form-body">
+
+                            <!-- Employee Selection -->
+                            <div class="form-group">
+                                <label>Employee Selection</label>
+                                <select id="wd-employee">
+                                    <option value="">Search employee name or ID...</option>
+                                </select>
+                            </div>
+
+                            <!-- Amount -->
+                            <div class="form-group">
+                                <label>Amount (EGP)</label>
+                                <div class="input-wrap">
+                                    <input type="number" id="wd-amount" min="0" step="0.01" placeholder="0.00">
+                                    <span class="input-suffix">EGP</span>
+                                </div>
+                                <div class="salary-hint" id="salary-hint"></div>
+                            </div>
+
+                            <!-- Reason / Category -->
+                            <div class="form-group">
+                                <label>Reason / Category</label>
+                                <select id="wd-category">
+                                    <option value="">-- Select Category --</option>
+                                    <option value="Emergency">Emergency</option>
+                                    <option value="Salary Advance">Salary Advance</option>
+                                    <option value="Personal">Personal</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Notes (optional)</label>
+                                <input type="text" id="wd-reason" placeholder="Reason for withdrawal..."
+                                    style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:0.82rem;background:#f8fafc;outline:none;color:#0f172a;">
+                            </div>
+
+                            <button class="btn-confirm" id="btn-confirm">
+                                <i class="fa-solid fa-shield-halved"></i> Confirm Withdrawal
+                            </button>
+                            <div class="form-auth-note">Authorized by Current System User</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions -->
+                    <div class="tx-card">
+                        <div class="tx-header">
+                            <h3><i class="fa-solid fa-table-list" style="color:#64748b;"></i> Recent Transactions</h3>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="text" class="filter-input" id="tx-filter" placeholder="Filter log...">
+                                <button class="btn-download" id="btn-download" title="Export CSV">
+                                    <i class="fa-solid fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="tx-table-wrap">
+                            <table class="tx-table">
+                                <thead>
+                                    <tr>
+                                        <th>EMPLOYEE NAME</th>
+                                        <th>AMOUNT (EGP)</th>
+                                        <th>DATE/TIME</th>
+                                        <th>REASON</th>
+                                        <th>ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tx-body">
+                                    <tr class="empty-row">
+                                        <td colspan="5">
+                                            <div class="spinner"></div><br>Loading transactions...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="tx-footer">
+                            <a href="#" id="view-all-link">View All Historical Transactions</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="js/withdrawals.js"></script>
+</body>
+
+</html>

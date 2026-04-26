@@ -1,0 +1,563 @@
+{
+  "tables": [
+    {
+      "name": "client_transactions",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "client_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "pharmacy_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "type",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "amount",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "reference_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "date",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "clients",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "name",
+          "type": "varchar(150)"
+        },
+        {
+          "field": "type",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "contact_person",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "phone",
+          "type": "varchar(30)"
+        },
+        {
+          "field": "email",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "address",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "credit_limit",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "total_debt",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "doctors",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "name",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "specialty",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "phone",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "email",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "license_number",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "status",
+          "type": "enum('active','away')"
+        },
+        {
+          "field": "location",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "field": "credit_limit",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "total_debt",
+          "type": "decimal(10,2)"
+        }
+      ]
+    },
+    {
+      "name": "employee_withdrawals",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "staff_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "amount",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "reason",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "category",
+          "type": "enum('Emergency','Salary Advance','Personal')"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "import_logs",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "product_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "warehouse_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "supplier_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "quantity",
+          "type": "int(11)"
+        },
+        {
+          "field": "unit_price",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "status",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "local_suppliers",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "supplier_code",
+          "type": "varchar(20)"
+        },
+        {
+          "field": "company_name",
+          "type": "varchar(150)"
+        },
+        {
+          "field": "contact_person",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "phone",
+          "type": "varchar(30)"
+        },
+        {
+          "field": "city_area",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "notes",
+          "type": "text"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "field": "updated_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "order_items",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "order_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "product_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "warehouse_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "batch_no",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "expiry_date",
+          "type": "date"
+        },
+        {
+          "field": "qty",
+          "type": "int(11)"
+        },
+        {
+          "field": "unit_price",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "discount",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "tax",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "subtotal",
+          "type": "decimal(12,2)"
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "order_number",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "client_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "pharmacy_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "warehouse_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "expected_delivery",
+          "type": "date"
+        },
+        {
+          "field": "total_amount",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "status",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "field": "staff_id",
+          "type": "int(11)"
+        }
+      ]
+    },
+    {
+      "name": "pharmacies",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "name",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "license_number",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "contact_person",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "area",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "phone",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "email",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "status",
+          "type": "enum('active','pending','suspended')"
+        },
+        {
+          "field": "credit_limit",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "total_debt",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "name",
+          "type": "varchar(255)"
+        },
+        {
+          "field": "quantity",
+          "type": "int(11)"
+        },
+        {
+          "field": "price",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "expiry_date",
+          "type": "date"
+        },
+        {
+          "field": "sku",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "category",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "manufacturer",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "purchase_price",
+          "type": "decimal(10,2)"
+        },
+        {
+          "field": "image_url",
+          "type": "varchar(255)"
+        }
+      ]
+    },
+    {
+      "name": "staff",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "name",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "role",
+          "type": "enum('admin','sales','warehouse')"
+        },
+        {
+          "field": "phone",
+          "type": "varchar(30)"
+        },
+        {
+          "field": "email",
+          "type": "varchar(100)"
+        },
+        {
+          "field": "status",
+          "type": "enum('active','leave')"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "field": "base_salary",
+          "type": "decimal(10,2)"
+        }
+      ]
+    },
+    {
+      "name": "supplier_transactions",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "supplier_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "import_log_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "total_amount",
+          "type": "decimal(12,2)"
+        },
+        {
+          "field": "transaction_type",
+          "type": "varchar(50)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "transfer_logs",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "from_warehouse_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "to_warehouse_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "product_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "quantity",
+          "type": "int(11)"
+        },
+        {
+          "field": "transferred_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "warehouse_inventory",
+      "columns": [
+        {
+          "field": "warehouse_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "product_id",
+          "type": "int(11)"
+        },
+        {
+          "field": "current_stock",
+          "type": "int(11)"
+        }
+      ]
+    },
+    {
+      "name": "warehouses",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)"
+        },
+        {
+          "field": "name",
+          "type": "varchar(150)"
+        },
+        {
+          "field": "location",
+          "type": "varchar(200)"
+        },
+        {
+          "field": "capacity",
+          "type": "int(11)"
+        },
+        {
+          "field": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المخزون | مركز القدس</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/inventory.css">
+    <style>
+        .stats-grid, .stat-card, .total-items, .total-value { display: none !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+
+        <header class="new-global-header" style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 15px 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; box-sizing: border-box; position: fixed; top: 0; left: 0; z-index: 1000;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: white;">مركز القدس 2</h2>
+            </div>
+            <a href="index.html" style="background: white; color: #1e3a8a; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 10px; transition: 0.3s; cursor: pointer;">
+                <i class="fa-solid fa-house"></i> Back to Dashboard
+            </a>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content" id="inventory-main-content" style="display: block; padding: 90px 20px 20px 20px; box-sizing: border-box;">
+
+            <!-- Main Content Area -->
+            <div class="content-card"
+                style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin: 0 auto; max-width: 1400px; width: 100%; box-sizing: border-box;">
+
+                <!-- Toolbar -->
+                <div class="toolbar"
+                    style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div class="search-box" style="display: flex; gap: 10px; flex: 1; max-width: 400px;">
+                        <input type="text" id="searchInput" placeholder="بحث باسم العنصر أو الـ SKU..."
+                            style="flex: 1; padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit;">
+                    </div>
+
+                    <div class="filters" style="display: flex; gap: 10px;">
+                        <select id="statusFilter"
+                            style="padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; cursor: pointer;">
+                            <option value="all">كل الحالات</option>
+                            <option value="available">متوفر (Available)</option>
+                            <option value="low">منخفض (Low Stock)</option>
+                            <option value="expired">منتهي (Expired)</option>
+                        </select>
+                        <button class="btn-primary" onclick="loadInventory()"
+                            style="background: #e2e8f0; color: #475569; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer;">
+                            <i class="fa-solid fa-rotate-right"></i> تحديث
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: right;">
+                        <thead style="background: #f8fafc; color: #475569; font-size: 0.9rem;">
+                            <tr>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">اسم العنصر (Item Name)
+                                </th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">المستودع (Warehouse)
+                                </th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">رقم التشغيلة (Batch)</th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">الكمية المتوفرة (Qty)
+                                </th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">تاريخ الصلاحية
+                                    (Expiry)</th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">السعر (Price)</th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">الحالة (Status)</th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">أفعال (Actions)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">جاري تحميل
+                                    البيانات...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Edit Inventory Modal -->
+    <div id="editInventoryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">تعديل بيانات المخزون</h2>
+            <form id="editInventoryForm">
+                <input type="hidden" id="edit_inventory_id">
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">اسم العنصر</label>
+                    <input type="text" id="edit_item_name" disabled style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; font-family: inherit;">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">المستودع</label>
+                    <input type="text" id="edit_warehouse_name" disabled style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; font-family: inherit;">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">الكمية المتوفرة</label>
+                    <input type="number" id="edit_current_stock" required min="0" step="1" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit;">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">رقم التشغيلة (Batch)</label>
+                    <input type="text" id="edit_batch_number" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit;">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">تاريخ الصلاحية</label>
+                    <input type="date" id="edit_expiry_date" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit;">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 1.5rem; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('editInventoryModal').style.display='none'" style="padding: 10px 20px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">إلغاء</button>
+                    <button type="submit" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/uom_utils.js"></script>
+    <script src="js/inventory.js"></script>
+</body>
+
+</html>

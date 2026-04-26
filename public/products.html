@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Catalog | الوازم الطبية</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/inventory.css">
+    
+    <style>
+        body {
+            background-color: #f8fafc;
+            margin: 0;
+            font-family: 'Tajawal', sans-serif;
+            color: #1e293b;
+        }
+
+        /* Modern Navigation Header */
+        .catalog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #0f766e 0%, #0369a1 100%);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            z-index: 1000;
+        }
+
+        .catalog-title {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .catalog-nav {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-link-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.95rem;
+        }
+
+        .nav-link-btn:hover {
+            background: white;
+            color: #0369a1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link-btn.primary {
+            background: white;
+            color: #0f766e;
+            border: none;
+        }
+
+        .nav-link-btn.primary:hover {
+            background: #f1f5f9;
+        }
+
+        /* Modal Styles matching layout */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #0f766e;
+        }
+
+        .btn-primary {
+            background: #0f766e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #115e59;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="catalog-header">
+        <h2 class="catalog-title">
+            <i class="fa-solid fa-box-medical"></i> الكتالوج الطبي - اللوازم الطبية
+        </h2>
+        <nav class="catalog-nav">
+            <a href="index.html" class="nav-link-btn primary">
+                <i class="fa-solid fa-house"></i> لوحة التحكم (Dashboard)
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="app" style="display: block; padding: 100px 30px 30px 30px; box-sizing: border-box; max-width: 1400px; margin: 0 auto;">
+        <!-- Content will be injected by products.js -->
+    </main>
+
+    <!-- Add Product Modal -->
+    <div class="modal-overlay" id="addProductModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+                <h2 id="productModalTitle" style="margin: 0; font-size: 1.4rem; color: #0f766e;"><i class="fa-solid fa-box-open"></i> إضافة منتج جديد</h2>
+                <button class="close-modal" onclick="closeProductModal()" style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; transition: color 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="productForm" onsubmit="submitProductForm(event)">
+                <input type="hidden" name="id" id="productId">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>اسم المنتج</label>
+                    <input type="text" name="name" required placeholder="اسم الدواء أو المستلزم">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>السعر (ج.م)</label>
+                    <input type="number" name="price" step="0.01" min="0" placeholder="سعر القطعة" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>الوحدة الأساسية</label>
+                    <select name="base_uom" id="base_uom" required>
+                        <option value="Piece">قطعة (Piece)</option>
+                        <option value="Ampoule">أمبول (Ampoule)</option>
+                        <option value="Bottle">زجاجة (Bottle)</option>
+                        <option value="Strip">شريط (Strip)</option>
+                        <option value="Pack">عبوة (Pack)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                    <input type="checkbox" id="has_bulk_uom" name="has_bulk_uom" style="width: auto;">
+                    <label for="has_bulk_uom" style="margin: 0; cursor: pointer;">هل يوجد وحدة كبرى؟ (Has Bulk Unit?)</label>
+                </div>
+                <div class="form-row bulk-uom-group" id="bulk-uom-group" style="display: none; margin-top: 15px; gap: 15px;">
+                    <div class="form-group">
+                        <label>الوحدة الكبرى</label>
+                        <select name="bulk_uom" id="bulk_uom">
+                            <option value="Box">علبة (Box)</option>
+                            <option value="Carton">كرتونة (Carton)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>معامل التحويل</label>
+                        <input type="number" name="conversion_factor" id="conversion_factor" min="2" placeholder="الكمية في الوحدة الكبرى">
+                    </div>
+                </div>
+                <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+                    <button type="button" class="btn-secondary" onclick="closeProductModal()" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #64748b; font-weight: 600; cursor: pointer;">إلغاء</button>
+                    <button type="submit" class="btn-primary" id="productSubmitBtn">حفظ المنتج</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/products.js"></script>
+</body>
+
+</html>
