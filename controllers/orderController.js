@@ -137,8 +137,8 @@ const getOrders = async (req, res, next) => {
             LEFT JOIN doctors d ON o.client_id = d.id
             LEFT JOIN pharmacies p ON o.pharmacy_id = p.id
             ORDER BY o.created_at DESC
-            LIMIT ? OFFSET ?
-        `, [limit, offset]);
+            LIMIT ${limit} OFFSET ${offset}
+        `);
 
         res.json({ orders, total, limit, offset });
     } catch (err) { next(err); }

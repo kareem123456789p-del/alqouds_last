@@ -247,6 +247,7 @@ async function loadOrders(reset = true) {
         const res = await fetch(`/api/orders?limit=${limit}&offset=${ordersOffset}`);
         const data = await res.json();
         const orders = data.orders || data; // backward compat
+        if (!Array.isArray(orders)) throw new Error('Invalid response');
         ordersTotal = data.total ?? orders.length;
 
         if (reset) {
@@ -1016,6 +1017,11 @@ async function exportOrderPDF(identifier) {
         const resList = await fetch(`/api/orders?limit=1000&offset=0`);
         const data = await resList.json();
         const orders = data.orders ?? data; // handle both array and paginated response
+        
+        if (!Array.isArray(orders)) {
+            return alert("Invalid response from server when fetching orders.");
+        }
+        
         const orderSummary = orders.find(o => o.id == identifier || o.order_number === identifier);
         if (!orderSummary) return alert("Order not found.");
 
@@ -1043,6 +1049,11 @@ async function exportOrderExcel(identifier) {
         const resList = await fetch(`/api/orders?limit=1000&offset=0`);
         const data = await resList.json();
         const orders = data.orders ?? data; // handle both array and paginated response
+        
+        if (!Array.isArray(orders)) {
+            return alert("Invalid response from server when fetching orders.");
+        }
+        
         const orderSummary = orders.find(o => o.id == identifier || o.order_number === identifier);
         if (!orderSummary) return alert("Order not found.");
 
@@ -1185,6 +1196,7 @@ async function generateReturnPDFFromTx(orderId) {
         const orderRes = await fetch(`/api/orders?limit=1000`);
         const orderData = await orderRes.json();
         const orders = orderData.orders || orderData;
+        if (!Array.isArray(orders)) throw new Error('Invalid response from server');
         const order = orders.find(o => o.id == orderId);
 
         if (!order) throw new Error('Order not found');
