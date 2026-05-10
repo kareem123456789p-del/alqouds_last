@@ -529,6 +529,7 @@ async function saveEditedDoctor(id) {
    ══════════════════════════════════════════════════════════════ */
 
 window.clientHistoryMonthGroups = [];
+window._orderItemsCache = {};
 
 async function openClientHistoryModal(clientType, id, name) {
     let overlay = document.getElementById('client-history-overlay');
@@ -572,45 +573,54 @@ async function openClientHistoryModal(clientType, id, name) {
                 const sc      = s.status === 'Dispatched' ? '#059669' : s.status === 'Cancelled' ? '#ef4444' : '#f59e0b';
 
                 return `
-                <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;
-                            background:#fff;border:1px solid #e2e8f0;border-radius:12px;
-                            box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:.75rem;transition:box-shadow .2s;"
-                     onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'"
-                     onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.04)'">
+                <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;
+                            box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:.75rem;">
 
-                    <div style="min-width:90px;text-align:center;background:#f8fafc;border-radius:10px;padding:.6rem .8rem;border:1px solid #e2e8f0;">
-                        <div style="font-size:.68rem;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;">DATE</div>
-                        <div style="font-size:.85rem;font-weight:700;color:#1e293b;line-height:1.2;">${dateStr}</div>
-                        <div style="font-size:.72rem;color:#94a3b8;">${timeStr}</div>
-                    </div>
+                    <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;
+                                background:#fff;transition:background .15s;">
 
-                    <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:4px;">
-                            <i class="fa-solid fa-truck-ramp-box" style="color:#3b82f6;font-size:.85rem;"></i>
-                            <span style="font-weight:700;color:#1e293b;font-size:.9rem;">
-                                طلب — ${count} ${count == 1 ? 'صنف' : 'أصناف'}
-                            </span>
-                            <span style="font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:999px;
-                                         background:${sc}1a;color:${sc};border:1px solid ${sc}33;">${s.status}</span>
+                        <div style="min-width:90px;text-align:center;background:#f8fafc;border-radius:10px;
+                                    padding:.6rem .8rem;border:1px solid #e2e8f0;flex-shrink:0;">
+                            <div style="font-size:.68rem;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;">DATE</div>
+                            <div style="font-size:.85rem;font-weight:700;color:#1e293b;line-height:1.2;">${dateStr}</div>
+                            <div style="font-size:.72rem;color:#94a3b8;">${timeStr}</div>
                         </div>
-                        <div style="color:#64748b;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">
-                            ${s.order_number}${s.main_item_name ? ' • ' + s.main_item_name : ''}
+
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:4px;flex-wrap:wrap;">
+                                <i class="fa-solid fa-truck-ramp-box" style="color:#3b82f6;font-size:.85rem;"></i>
+                                <span style="font-weight:700;color:#1e293b;font-size:.9rem;">
+                                    طلب — ${count} ${count == 1 ? 'صنف' : 'أصناف'}
+                                </span>
+                                <span style="font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:999px;
+                                             background:${sc}1a;color:${sc};border:1px solid ${sc}33;">${s.status}</span>
+                            </div>
+                            <div style="color:#64748b;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">
+                                ${s.order_number}${s.main_item_name ? ' • ' + s.main_item_name : ''}
+                            </div>
+                        </div>
+
+                        <div style="text-align:center;min-width:80px;flex-shrink:0;">
+                            <div style="font-size:.68rem;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;">TOTAL</div>
+                            <div style="font-size:1.05rem;font-weight:800;color:#059669;">$${total}</div>
+                        </div>
+
+                        <button id="det-btn-${s.id}"
+                            onclick="toggleOrderDetails(${s.id})"
+                            style="display:flex;align-items:center;gap:6px;padding:9px 18px;border:1.5px solid #3b82f6;
+                                   border-radius:10px;background:#fff;color:#2563eb;font-weight:700;
+                                   font-size:.88rem;cursor:pointer;white-space:nowrap;transition:.2s;flex-shrink:0;"
+                            onmouseover="this.style.background='#eff6ff'"
+                            onmouseout="this.style.background='#fff'">
+                            <i class="fa-solid fa-list-ul"></i> تفاصيل الطلب
+                        </button>
+                    </div>
+
+                    <div id="det-panel-${s.id}" style="display:none;border-top:1px solid #e2e8f0;background:#f8fafc;">
+                        <div style="padding:.75rem 1.25rem;text-align:center;color:#94a3b8;font-size:.85rem;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل التفاصيل...
                         </div>
                     </div>
-
-                    <div style="text-align:center;min-width:90px;">
-                        <div style="font-size:.68rem;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;">TOTAL</div>
-                        <div style="font-size:1.05rem;font-weight:800;color:#059669;">$${total}</div>
-                    </div>
-
-                    <button onclick="openOrderInvoicePDF(${s.id})"
-                        style="display:flex;align-items:center;gap:8px;padding:10px 20px;border:none;border-radius:10px;
-                               background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:700;
-                               font-size:.9rem;cursor:pointer;white-space:nowrap;transition:.2s;flex-shrink:0;"
-                        onmouseover="this.style.transform='scale(1.04)'"
-                        onmouseout="this.style.transform='scale(1)'">
-                        <i class="fa-solid fa-eye"></i> عرض الفاتورة
-                    </button>
                 </div>`;
             }).join('');
 
@@ -618,7 +628,7 @@ async function openClientHistoryModal(clientType, id, name) {
             <div style="margin-bottom:1rem;">
                 <div style="display:flex;align-items:center;justify-content:space-between;
                             padding:1rem 1.25rem;background:#eef2ff;border-radius:12px;cursor:pointer;
-                            font-weight:700;color:#1e293b;"
+                            font-weight:700;color:#1e293b;margin-bottom:.5rem;"
                      onclick="const c=this.nextElementSibling;c.style.display=c.style.display==='none'?'block':'none'">
                     <div style="display:flex;align-items:center;gap:0.75rem;">
                         <i class="fa-solid fa-folder" style="color:#3b82f6;font-size:1.2rem;"></i>
@@ -626,7 +636,7 @@ async function openClientHistoryModal(clientType, id, name) {
                     </div>
                     <i class="fa-solid fa-chevron-down" style="color:#94a3b8;"></i>
                 </div>
-                <div style="padding:.75rem 0 0;">${shipmentsHtml}</div>
+                <div>${shipmentsHtml}</div>
             </div>`;
         }).join('');
 
@@ -638,15 +648,91 @@ async function openClientHistoryModal(clientType, id, name) {
     }
 }
 
+async function toggleOrderDetails(orderId) {
+    const panel  = document.getElementById(`det-panel-${orderId}`);
+    const btn    = document.getElementById(`det-btn-${orderId}`);
+    if (!panel) return;
+
+    const isOpen = panel.style.display !== 'none';
+    if (isOpen) {
+        panel.style.display = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-list-ul"></i> تفاصيل الطلب';
+        btn.style.background = '#fff';
+        return;
+    }
+
+    panel.style.display = 'block';
+    btn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> إخفاء التفاصيل';
+    btn.style.background = '#eff6ff';
+
+    if (window._orderItemsCache[orderId]) {
+        _renderOrderItems(panel, orderId, window._orderItemsCache[orderId]);
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/orders/${orderId}/items`);
+        if (!res.ok) throw new Error('فشل تحميل بنود الطلب');
+        const items = await res.json();
+        window._orderItemsCache[orderId] = items;
+        _renderOrderItems(panel, orderId, items);
+    } catch (err) {
+        panel.innerHTML = `<div style="padding:1rem 1.25rem;color:#ef4444;font-size:.85rem;">
+            <i class="fa-solid fa-circle-exclamation"></i> ${err.message}</div>`;
+    }
+}
+
+function _renderOrderItems(panel, orderId, items) {
+    if (!items || items.length === 0) {
+        panel.innerHTML = `<div style="padding:1rem 1.25rem;color:#94a3b8;text-align:center;font-size:.85rem;">
+            لا توجد بنود مسجلة لهذا الطلب.</div>`;
+        return;
+    }
+
+    const rows = items.map(item => {
+        const qty       = item.qty || 0;
+        const unitPrice = parseFloat(item.unit_price || item.base_price || 0);
+        const subtotal  = (qty * unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 });
+        const returned  = item.returned_qty ? `<span style="font-size:.75rem;color:#ef4444;margin-right:4px;">(مرتجع: ${item.returned_qty})</span>` : '';
+        return `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:.65rem 1rem;font-weight:600;color:#1e293b;">${item.product_name || '—'}</td>
+            <td style="padding:.65rem 1rem;text-align:center;color:#475569;">${qty} ${returned}</td>
+            <td style="padding:.65rem 1rem;text-align:center;color:#475569;font-family:monospace;">
+                $${unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="padding:.65rem 1rem;text-align:left;color:#059669;font-weight:700;font-family:monospace;">
+                $${subtotal}</td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+    <div style="padding:.5rem 0;">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+            <thead>
+                <tr style="background:#e8edf5;">
+                    <th style="padding:.6rem 1rem;text-align:right;color:#64748b;font-weight:700;font-size:.75rem;letter-spacing:.3px;">اسم المنتج</th>
+                    <th style="padding:.6rem 1rem;text-align:center;color:#64748b;font-weight:700;font-size:.75rem;letter-spacing:.3px;">الكمية</th>
+                    <th style="padding:.6rem 1rem;text-align:center;color:#64748b;font-weight:700;font-size:.75rem;letter-spacing:.3px;">سعر الوحدة</th>
+                    <th style="padding:.6rem 1rem;text-align:left;color:#64748b;font-weight:700;font-size:.75rem;letter-spacing:.3px;">الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+}
+
 function closeClientHistoryModal() {
     const ov = document.getElementById('client-history-overlay');
     if (ov) ov.classList.remove('open');
+    window._orderItemsCache = {};
 }
 
 function openOrderInvoicePDF(orderId) {
     if (typeof exportOrderPDF === 'function') { exportOrderPDF(orderId); return; }
     window.open(`/orders.html?print=${orderId}`, '_blank');
 }
+
+
 
 function _buildClientHistoryModal() {
     const style = document.createElement('style');
