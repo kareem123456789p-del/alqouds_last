@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, processReturn, cancelOrder } = require('../controllers/orderController');
+const { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, processReturn, cancelOrder, getClientHistory } = require('../controllers/orderController');
 
 // Client related
 router.get('/clients', getClients);
+
+// ── Transaction History for Doctor / Pharmacy ──────────────────────────────
+router.get('/history/:clientType/:clientId', getClientHistory);
 
 // Product cost-price lookup (must be before /:id routes)
 router.get('/product/:id/cost-price', getCostPrice);

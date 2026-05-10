@@ -430,4 +430,69 @@ const cancelOrder = async (req, res, next) => {
     }
 };
 
-module.exports = { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, getClientSummary, processReturn, cancelOrder };
+module.exports = { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, getClientSummary, processReturn, cancelOrder, getClientHistory };
+
+// ── GET /api/orders/history/:clientType/:clientId ─────────────────────────
+// clientType: 'doctor' | 'pharmacy'
+// Returns orders grouped by month, plus aggregate totals.
+// Response shape mirrors the supplier /history endpoint for UI reuse.
+async function getClientHistory(req, res, next) {
+    try {
+        const { clientType, clientId } = req.params;
+        const id = parseInt(clientId);
+        if (!id || !['doctor', 'pharmacy'].includes(clientType)) {
+            return res.status(400).json({ error: 'Invalid clientType or clientId' });
+        }
+
+        // Build WHERE clause
+        const whereCol = clientType === 'doctor' ? 'o.client_id' : 'o.pharmacy_id';
+
+        const [orders] = await pool.execute(`
+            SELECT
+                o.id,
+                o.order_number,
+                o.created_at,
+                o.total_amount,
+                o.status,
+                (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS item_count,
+                (SELECT p.name FROM order_items oi2 
+                 JOIN products p ON oi2.product_id = p.id 
+                 WHERE oi2.order_id = o.id 
+                 ORDER BY oi2.id ASC LIMIT 1) AS main_item_name
+            FROM orders o
+            WHERE ${whereCol} = ${id}
+            ORDER BY o.created_at DESC
+        `);
+
+        // ── Outstanding balance (sum of non-cancelled orders) ──────────────
+        const totalBalance = orders
+            .filter(o => o.status !== 'Cancelled')
+            .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+
+        // ── Group by Month Year ────────────────────────────────────────────
+        const monthMap = new Map();
+        for (const order of orders) {
+            const date = new Date(order.created_at);
+            const monthYear = date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+            if (!monthMap.has(monthYear)) {
+                monthMap.set(monthYear, { monthLabel: monthYear, shipments: [] });
+            }
+            monthMap.get(monthYear).shipments.push({
+                id: order.id,
+                order_number: order.order_number,
+                created_at: order.created_at,
+                shipment_total: parseFloat(order.total_amount || 0),
+                status: order.status,
+                item_count: order.item_count,
+                main_item_name: order.main_item_name,
+                items: [{ product_name: order.main_item_name || 'N/A', quantity: order.item_count }]
+            });
+        }
+
+        res.json({
+            total_transactions_count: orders.length,
+            total_outstanding_balance: totalBalance,
+            monthGroups: Array.from(monthMap.values())
+        });
+    } catch (err) { next(err); }
+}

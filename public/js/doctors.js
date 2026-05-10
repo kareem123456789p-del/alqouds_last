@@ -128,8 +128,13 @@ function generateDoctorsCardsHTML(doctorsList) {
                     <button class="doc-action-btn edit" title="Edit Doctor" onclick="openEditDoctorModal(${doc.id})">
                         <i class="fa-solid fa-pen"></i>
                     </button>
-                    <button class="doc-action-btn delete" title="Delete Doctor" onclick="deleteDoctorById(${doc.id}, '${docName.replace(/'/g, "\\'")}')">
+                    <button class="doc-action-btn delete" title="Delete Doctor" onclick="deleteDoctorById(${doc.id}, '${docName.replace(/'/g, "\\'")}')">  
                         <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button class="doc-action-btn" title="Transaction History"
+                        style="color:#3b82f6;border-color:#bfdbfe;background:#eff6ff;"
+                        onclick="openClientHistoryModal('doctor', ${doc.id}, '${docName.replace(/'/g, "\\'")}')">  
+                        <i class="fa-solid fa-clock-rotate-left"></i>
                     </button>
                 </div>
                 <div class="doc-avatar-wrapper">
@@ -289,7 +294,8 @@ async function showDoctorProfile(id) {
                     <div class="info-section">
                         <div class="section-title">ORDER HISTORY</div>
                         ${orderHistoryHtml}
-                        <button class="btn-outline" style="width: 100%; margin-top: 1rem; border-color: #e2e8f0; color: #475569; padding: 0.75rem;">VIEW FULL ACTIVITY</button>
+                        <button class="btn-outline" style="width: 100%; margin-top: 1rem; border-color: #e2e8f0; color: #475569; padding: 0.75rem;"
+                            onclick="openClientHistoryModal('doctor', ${doc.id}, '${docName.replace(/'/g, "\\'")}')">VIEW FULL ACTIVITY</button>
                     </div>
                 </div>
                 
@@ -516,4 +522,186 @@ async function saveEditedDoctor(id) {
         alert('Failed to save changes: ' + err.message);
         if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes'; }
     }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UNIFIED CLIENT TRANSACTION HISTORY MODAL (shared with pharmacies.js)
+   ══════════════════════════════════════════════════════════════ */
+
+window.clientHistoryMonthGroups = [];
+
+async function openClientHistoryModal(clientType, id, name) {
+    let overlay = document.getElementById('client-history-overlay');
+    if (!overlay) _buildClientHistoryModal();
+    overlay = document.getElementById('client-history-overlay');
+
+    overlay.classList.add('open');
+    document.getElementById('client-hist-title').textContent = `سجل معاملات: ${name}`;
+    document.getElementById('client-hist-total-count').textContent = '…';
+    document.getElementById('client-hist-total-balance').textContent = '…';
+    const listEl = document.getElementById('client-hist-list');
+    listEl.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;margin-bottom:.75rem;display:block;"></i>
+        جاري تحميل السجل...</div>`;
+
+    try {
+        const res = await fetch(`/api/orders/history/${clientType}/${id}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        document.getElementById('client-hist-total-count').textContent = data.total_transactions_count;
+        document.getElementById('client-hist-total-balance').textContent =
+            '$' + Number(data.total_outstanding_balance).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        window.clientHistoryMonthGroups = data.monthGroups || [];
+
+        if (!data.monthGroups || data.monthGroups.length === 0) {
+            listEl.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
+                <i class="fa-solid fa-folder-open" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
+                لا توجد طلبات مسجلة لهذا الطبيب.</div>`;
+            return;
+        }
+
+        listEl.innerHTML = data.monthGroups.map(group => {
+            const shipmentsHtml = group.shipments.map(s => {
+                const dateObj = new Date(s.created_at);
+                const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const total   = Number(s.shipment_total).toLocaleString(undefined, { minimumFractionDigits: 2 });
+                const count   = s.item_count || (s.items ? s.items.length : 0);
+                const sc      = s.status === 'Dispatched' ? '#059669' : s.status === 'Cancelled' ? '#ef4444' : '#f59e0b';
+
+                return `
+                <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;
+                            background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+                            box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:.75rem;transition:box-shadow .2s;"
+                     onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'"
+                     onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.04)'">
+
+                    <div style="min-width:90px;text-align:center;background:#f8fafc;border-radius:10px;padding:.6rem .8rem;border:1px solid #e2e8f0;">
+                        <div style="font-size:.68rem;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;">DATE</div>
+                        <div style="font-size:.85rem;font-weight:700;color:#1e293b;line-height:1.2;">${dateStr}</div>
+                        <div style="font-size:.72rem;color:#94a3b8;">${timeStr}</div>
+                    </div>
+
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:4px;">
+                            <i class="fa-solid fa-truck-ramp-box" style="color:#3b82f6;font-size:.85rem;"></i>
+                            <span style="font-weight:700;color:#1e293b;font-size:.9rem;">
+                                طلب — ${count} ${count == 1 ? 'صنف' : 'أصناف'}
+                            </span>
+                            <span style="font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:999px;
+                                         background:${sc}1a;color:${sc};border:1px solid ${sc}33;">${s.status}</span>
+                        </div>
+                        <div style="color:#64748b;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">
+                            ${s.order_number}${s.main_item_name ? ' • ' + s.main_item_name : ''}
+                        </div>
+                    </div>
+
+                    <div style="text-align:center;min-width:90px;">
+                        <div style="font-size:.68rem;font-weight:700;color:#94a3b8;letter-spacing:.4px;margin-bottom:2px;">TOTAL</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#059669;">$${total}</div>
+                    </div>
+
+                    <button onclick="openOrderInvoicePDF(${s.id})"
+                        style="display:flex;align-items:center;gap:8px;padding:10px 20px;border:none;border-radius:10px;
+                               background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:700;
+                               font-size:.9rem;cursor:pointer;white-space:nowrap;transition:.2s;flex-shrink:0;"
+                        onmouseover="this.style.transform='scale(1.04)'"
+                        onmouseout="this.style.transform='scale(1)'">
+                        <i class="fa-solid fa-eye"></i> عرض الفاتورة
+                    </button>
+                </div>`;
+            }).join('');
+
+            return `
+            <div style="margin-bottom:1rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            padding:1rem 1.25rem;background:#eef2ff;border-radius:12px;cursor:pointer;
+                            font-weight:700;color:#1e293b;"
+                     onclick="const c=this.nextElementSibling;c.style.display=c.style.display==='none'?'block':'none'">
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <i class="fa-solid fa-folder" style="color:#3b82f6;font-size:1.2rem;"></i>
+                        <span style="font-size:1.05rem;">${group.monthLabel}</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down" style="color:#94a3b8;"></i>
+                </div>
+                <div style="padding:.75rem 0 0;">${shipmentsHtml}</div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error('History fetch error:', err);
+        listEl.innerHTML = `<div style="text-align:center;padding:2rem;color:#ef4444;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            خطأ في تحميل السجل.</div>`;
+    }
+}
+
+function closeClientHistoryModal() {
+    const ov = document.getElementById('client-history-overlay');
+    if (ov) ov.classList.remove('open');
+}
+
+function openOrderInvoicePDF(orderId) {
+    if (typeof exportOrderPDF === 'function') { exportOrderPDF(orderId); return; }
+    window.open(`/orders.html?print=${orderId}`, '_blank');
+}
+
+function _buildClientHistoryModal() {
+    const style = document.createElement('style');
+    style.textContent = `
+        #client-history-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.55);
+            z-index:9000; align-items:center; justify-content:center; padding:1rem; }
+        #client-history-overlay.open { display:flex !important; }
+    `;
+    document.head.appendChild(style);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'client-history-overlay';
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeClientHistoryModal(); });
+
+    overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:800px;max-height:88vh;
+                display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.18);overflow:hidden;">
+        <div style="padding:1.5rem 1.75rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:.75rem;">
+                <i class="fa-solid fa-clock-rotate-left" style="color:#3b82f6;font-size:1.3rem;"></i>
+                <h2 id="client-hist-title" style="font-size:1.2rem;font-weight:700;color:#1e293b;margin:0;">Transaction History</h2>
+            </div>
+            <button onclick="closeClientHistoryModal()"
+                style="border:none;background:#f1f5f9;color:#64748b;width:36px;height:36px;
+                       border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1.25rem 1.75rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:.7rem;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:4px;">TOTAL ORDERS</div>
+                    <div id="client-hist-total-count" style="font-size:2rem;font-weight:800;color:#1e293b;">…</div>
+                </div>
+                <div style="width:48px;height:48px;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-list-check" style="color:#3b82f6;font-size:1.3rem;"></i>
+                </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:.7rem;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:4px;">TOTAL OUTSTANDING BALANCE</div>
+                    <div id="client-hist-total-balance" style="font-size:2rem;font-weight:800;color:#059669;">…</div>
+                </div>
+                <div style="width:48px;height:48px;background:#f0fdf4;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-money-bill-trend-up" style="color:#059669;font-size:1.3rem;"></i>
+                </div>
+            </div>
+        </div>
+        <div id="client-hist-list" style="flex:1;overflow-y:auto;padding:1.5rem 1.75rem;"></div>
+        <div style="padding:1rem 1.75rem;border-top:1px solid #f1f5f9;text-align:left;">
+            <button onclick="closeClientHistoryModal()"
+                style="background:#f1f5f9;color:#475569;border:none;padding:.6rem 1.5rem;
+                       border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">إغلاق</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(overlay);
 }
