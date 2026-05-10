@@ -143,11 +143,11 @@ function renderItemsPage(page) {
         itemsTbody.innerHTML = `
             <tr>
                 <td colspan="5" class="table-empty-state">
-                    <i class="fa-solid fa-box-open"></i>
-                    <p>No inventory found in this warehouse.</p>
+                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 0.5rem; display: block;"></i>
+                    <p>هذا المخزن فارغ حالياً، لا توجد أصناف قابلة للنقل</p>
                 </td>
             </tr>`;
-        tableInfo.textContent = 'No products found.';
+        tableInfo.textContent = 'لا توجد أصناف.';
         paginationCtrl.innerHTML = '';
         return;
     }

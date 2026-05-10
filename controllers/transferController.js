@@ -41,6 +41,7 @@ const getWarehouseProducts = async (req, res, next) => {
             FROM warehouse_inventory wi
             JOIN products p ON p.id = wi.product_id
             WHERE wi.warehouse_id = ?
+              AND p.is_active = 1 AND p.is_deleted = 0
             GROUP BY p.id, p.name, p.sku, p.price
             HAVING SUM(wi.current_stock) > 0
             ORDER BY p.name
