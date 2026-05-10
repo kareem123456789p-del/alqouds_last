@@ -49,6 +49,7 @@ async function loadWarehouses() {
     try {
         const res = await fetch('/api/transfer/warehouses');
         const data = await res.json();
+        window._allWarehouses = data; // cache for reactive dest filtering
         renderWarehouseCards(data);
         populateDestDropdown(data);
     } catch (err) {
@@ -75,14 +76,18 @@ function renderWarehouseCards(warehouses) {
     }).join('');
 }
 
-function populateDestDropdown(warehouses) {
+function populateDestDropdown(warehouses, excludeId = null) {
     destSelect.innerHTML = '<option value="">— Select Target Warehouse —</option>';
     warehouses.forEach(wh => {
+        if (String(wh.id) === String(excludeId)) return; // exclude source
         const opt = document.createElement('option');
         opt.value = wh.id;
         opt.textContent = `${wh.name} (${wh.location})`;
         destSelect.appendChild(opt);
     });
+    // reset destination summary when source changes
+    summaryTo.textContent = 'None selected';
+    summaryTo.style.color = '#9ca3af';
 }
 
 // ── Step 1: Select Warehouse ─────────────────────────
@@ -101,6 +106,10 @@ async function selectWarehouse(warehouseId, warehouseName) {
     // Update summary
     summaryFrom.textContent = warehouseName;
     summaryFrom.style.color = '#1f2937';
+
+    // Reactively rebuild destination dropdown excluding the new source
+    populateDestDropdown(window._allWarehouses || [], warehouseId);
+    destSelect.value = '';
     validateConfirmButton();
 
     // Fetch products for this warehouse
@@ -312,9 +321,20 @@ async function confirmTransfer() {
         if (!res.ok) throw new Error(data.error || 'Transfer failed');
 
         showToast(`✅ ${data.message}`, 'success');
+
+        // Reload source warehouse stock BEFORE resetting form, so selectedSourceId is still valid
+        const reloadId = selectedSourceId;
+        const reloadName = selectedSourceName;
         resetForm();
-        // Reload the source warehouse products to show updated stock
-        if (selectedSourceId) await selectWarehouse(selectedSourceId, selectedSourceName);
+        await selectWarehouse(reloadId, reloadName);
+        // Also refresh warehouse cards to reflect updated fill %
+        const whRes = await fetch('/api/transfer/warehouses');
+        const whData = await whRes.json();
+        window._allWarehouses = whData;
+        renderWarehouseCards(whData);
+        // Re-highlight the active source card
+        const card = document.getElementById(`wh-card-${reloadId}`);
+        if (card) card.classList.add('selected');
     } catch (err) {
         showToast(err.message, 'error');
     } finally {
@@ -327,6 +347,7 @@ function saveDraft() {
     showToast('Draft saved locally. (Draft persistence coming soon)', 'info');
 }
 
+// Reset only item selections — preserve source warehouse context
 function resetForm() {
     selectAllChk.checked = false;
     document.querySelectorAll('.row-checkbox').forEach(cb => {
@@ -334,6 +355,9 @@ function resetForm() {
         const row = cb.closest('tr');
         toggleRowQtyInput(row, false);
     });
+    destSelect.value = '';
+    summaryTo.textContent = 'None selected';
+    summaryTo.style.color = '#9ca3af';
     updateSummary();
     validateConfirmButton();
 }

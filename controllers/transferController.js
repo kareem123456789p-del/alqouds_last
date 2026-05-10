@@ -37,10 +37,12 @@ const getWarehouseProducts = async (req, res, next) => {
                 p.name,
                 p.sku,
                 p.price,
-                wi.current_stock AS available_qty
+                SUM(wi.current_stock) AS available_qty
             FROM warehouse_inventory wi
             JOIN products p ON p.id = wi.product_id
             WHERE wi.warehouse_id = ?
+            GROUP BY p.id, p.name, p.sku, p.price
+            HAVING SUM(wi.current_stock) > 0
             ORDER BY p.name
         `, [warehouseId]);
         res.json(rows);
@@ -82,13 +84,13 @@ const processTransfer = async (req, res, next) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Check Target Warehouse capacity (Lock target row)
+        // 1. Check Target Warehouse capacity — subquery avoids GROUP BY + FOR UPDATE conflict
         const [targetRows] = await conn.execute(
-            `SELECT w.capacity, COALESCE(SUM(wi.current_stock), 0) AS total_stock
+            `SELECT w.capacity,
+                    COALESCE((SELECT SUM(wi2.current_stock) FROM warehouse_inventory wi2 WHERE wi2.warehouse_id = w.id), 0) AS total_stock
              FROM warehouses w
-             LEFT JOIN warehouse_inventory wi ON wi.warehouse_id = w.id
              WHERE w.id = ?
-             GROUP BY w.id, w.capacity FOR UPDATE`,
+             FOR UPDATE`,
             [to_warehouse_id]
         );
 
@@ -98,7 +100,7 @@ const processTransfer = async (req, res, next) => {
         }
 
         const { capacity, total_stock } = targetRows[0];
-        const remainingCapacity = capacity - Number(total_stock);
+        const remainingCapacity = (capacity || 10000) - Number(total_stock);
 
         if (remainingCapacity < totalTransferQty) {
             await conn.rollback();
