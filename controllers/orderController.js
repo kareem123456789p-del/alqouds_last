@@ -430,7 +430,7 @@ const cancelOrder = async (req, res, next) => {
     }
 };
 
-module.exports = { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, getClientSummary, processReturn, cancelOrder, getClientHistory };
+
 
 // ── GET /api/orders/history/:clientType/:clientId ─────────────────────────
 // clientType: 'doctor' | 'pharmacy'
@@ -496,3 +496,5 @@ async function getClientHistory(req, res, next) {
         });
     } catch (err) { next(err); }
 }
+
+module.exports = { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, getClientSummary, processReturn, cancelOrder, getClientHistory };
