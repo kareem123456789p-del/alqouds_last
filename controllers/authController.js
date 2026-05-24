@@ -98,10 +98,11 @@ const logout = (req, res) => {
  */
 const requireAuth = (req, res, next) => {
     const token = req.cookies?.session_token;
+    const isApiRequest = req.path.startsWith('/api/') || req.originalUrl.startsWith('/api/');
 
     if (!token || !sessions.has(token)) {
         // For HTML requests, redirect to login
-        if (req.accepts('html')) {
+        if (!isApiRequest && req.accepts('html')) {
             return res.redirect('/login.html');
         }
         return res.status(401).json({ error: 'Authentication required.' });
@@ -110,7 +111,7 @@ const requireAuth = (req, res, next) => {
     const session = sessions.get(token);
     if (Date.now() > session.expiresAt) {
         sessions.delete(token);
-        if (req.accepts('html')) {
+        if (!isApiRequest && req.accepts('html')) {
             return res.redirect('/login.html');
         }
         return res.status(401).json({ error: 'Session expired.' });
@@ -120,4 +121,4 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
-module.exports = { login, checkSession, logout, requireAuth };
+module.exports = { login, checkSession, logout, requireAuth, sessions };

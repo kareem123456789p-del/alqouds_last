@@ -23,6 +23,37 @@ app.use('/api', (req, res, next) => {
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
 
+// ── Global Auth Guard Middleware ──
+const { requireAuth, sessions } = require('./controllers/authController');
+
+app.use((req, res, next) => {
+    const requestPath = req.path;
+
+    // 1. Exclude public API auth routes
+    if (requestPath.startsWith('/api/auth')) {
+        return next();
+    }
+
+    // 2. Exclude static assets (styles, scripts, fonts, images)
+    const isAsset = /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(requestPath) ||
+                    requestPath.startsWith('/css/') ||
+                    requestPath.startsWith('/js/') ||
+                    requestPath.startsWith('/fonts/') ||
+                    requestPath.startsWith('/assets/');
+                    
+    if (isAsset) {
+        return next();
+    }
+
+    // 3. Exclude login.html and the root path /
+    if (requestPath === '/login.html' || requestPath === '/') {
+        return next();
+    }
+
+    // 4. Require authentication for all other routes
+    requireAuth(req, res, next);
+});
+
 // خدمة الملفات الثابتة (HTML, CSS, JS)
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -80,9 +111,16 @@ app.use((err, req, res, next) => {
 });
 
 
-// Root route → serve the login page as the landing page
+// Root route → serve the login page as the landing page (or redirect to dashboard if already authenticated)
 app.get('/', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    const token = req.cookies?.session_token;
+    if (token && sessions.has(token)) {
+        const session = sessions.get(token);
+        if (Date.now() <= session.expiresAt) {
+            return res.redirect('/index.html');
+        }
+    }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
