@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al-Quds Center — Login</title>
+    <meta name="description" content="Secure login portal for Al-Quds Center Medical Inventory Management System.">
+
+    <!-- Google Fonts — Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Login Styles -->
+    <link rel="stylesheet" href="css/login.css">
+</head>
+
+<body>
+
+    <!-- Toast notification container -->
+    <div id="login-toast" class="toast"></div>
+
+    <div class="login-wrapper">
+
+        <!-- ═══ LEFT PANEL — Form ═══ -->
+        <div class="login-panel">
+
+            <!-- Medical Icon Badge -->
+            <div class="login-icon-badge">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="4" stroke="#2563eb" stroke-width="1.8"/>
+                    <path d="M12 8v8M8 12h8" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <!-- Header -->
+            <h1 class="login-title">Al-Quds Center</h1>
+            <p class="login-subtitle">Welcome Back | أهلاً بكم من جديد</p>
+
+            <!-- Login Card -->
+            <div class="login-card">
+                <form id="loginForm" autocomplete="on" novalidate>
+
+                    <!-- Email / Username -->
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <span class="form-label">Username or Email</span>
+                            <span class="form-label-ar">| اسم المستخدم أو البريد الإلكتروني</span>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user input-icon-right"></i>
+                            <input
+                                type="email"
+                                id="login-email"
+                                name="email"
+                                placeholder="example@center.com"
+                                autocomplete="email"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <span class="form-label">Password</span>
+                            <span class="form-label-ar">| كلمة المرور</span>
+                            <a class="forgot-link" href="javascript:void(0)" onclick="showToast('Please contact system admin to reset your password.', 'error')">
+                                ?Forgot Password | نسيت كلمة المرور؟
+                            </a>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-lock input-icon-right"></i>
+                            <input
+                                type="password"
+                                id="login-password"
+                                name="password"
+                                placeholder="••••••••"
+                                autocomplete="current-password"
+                                required
+                            >
+                            <i class="fa-solid fa-eye input-icon-left" id="toggle-password" onclick="togglePasswordVisibility()"></i>
+                        </div>
+                    </div>
+
+                    <!-- Remember Session -->
+                    <div class="remember-row">
+                        <input type="checkbox" id="remember-session" name="remember">
+                        <label for="remember-session">Remember session | تذكر الجلسة</label>
+                    </div>
+
+                    <!-- Login Button -->
+                    <button type="submit" class="login-btn" id="login-btn">
+                        <span class="btn-arrow">←</span>
+                        <span id="login-btn-text">Login</span>
+                    </button>
+
+                    <!-- Secure Badge -->
+                    <div class="secure-badge">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Secure Clinical Sanctuary Access | دخول آمن لنظام المركز</span>
+                        <i class="fa-solid fa-circle-check" style="color:#22c55e;"></i>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="login-footer">
+                <div class="footer-main">
+                    © 2026 All rights reserved. Medical Excellence. <span class="brand">Al-Quds Center</span> .
+                </div>
+                <div class="footer-compliance">REGULATORY COMPLIANCE | HIPAA SECURE</div>
+            </div>
+        </div>
+
+        <!-- ═══ RIGHT PANEL — Medical image ═══ -->
+        <div class="image-panel">
+            <img src="login_bg.png" alt="Al-Quds Medical Center" loading="eager">
+        </div>
+    </div>
+
+    <script>
+        // ── Redirect if already authenticated ────────────────────────
+        (async function checkExistingSession() {
+            try {
+                const res = await fetch('/api/auth/check', { credentials: 'same-origin' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.authenticated) {
+                        window.location.href = '/index.html';
+                    }
+                }
+            } catch (_) { /* ignore — not logged in */ }
+        })();
+
+        // ── Toggle password visibility ───────────────────────────────
+        function togglePasswordVisibility() {
+            const input = document.getElementById('login-password');
+            const icon  = document.getElementById('toggle-password');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        // ── Toast notification ───────────────────────────────────────
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('login-toast');
+            const icon = type === 'success'
+                ? '<i class="fa-solid fa-circle-check"></i>'
+                : '<i class="fa-solid fa-circle-exclamation"></i>';
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `${icon} ${message}`;
+
+            // Trigger reflow for re-animation
+            void toast.offsetWidth;
+            toast.classList.add('show');
+
+            clearTimeout(window._toastTimeout);
+            window._toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // ── Form submission ──────────────────────────────────────────
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email    = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const remember = document.getElementById('remember-session').checked;
+            const btn      = document.getElementById('login-btn');
+            const btnText  = document.getElementById('login-btn-text');
+
+            if (!email || !password) {
+                showToast('Please enter both email and password.', 'error');
+                return;
+            }
+
+            // Show loading state
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> Authenticating...';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email, password, remember })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    showToast('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/index.html';
+                    }, 600);
+                } else {
+                    showToast(data.error || 'Invalid credentials.', 'error');
+                    btn.disabled = false;
+                    btnText.textContent = 'Login';
+                }
+            } catch (err) {
+                showToast('Network error. Please try again.', 'error');
+                btn.disabled = false;
+                btnText.textContent = 'Login';
+            }
+        });
+
+        // ── Enter key support on inputs ──────────────────────────────
+        document.getElementById('login-email').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('login-password').focus();
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
@@ -8,6 +9,7 @@ const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -16,6 +18,10 @@ app.use('/api', (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     next();
 });
+
+// ── Auth routes (public — no cookie needed to reach login endpoint) ──
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
 
 // خدمة الملفات الثابتة (HTML, CSS, JS)
 const path = require('path');
@@ -74,10 +80,10 @@ app.use((err, req, res, next) => {
 });
 
 
-// السطر ده بيضمن إن أي حد يفتح الموقع يروح لصفحة index.html
+// Root route → serve the login page as the landing page
 app.get('/', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Start Server
