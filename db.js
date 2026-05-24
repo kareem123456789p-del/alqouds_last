@@ -6,25 +6,27 @@ const pool = mysql.createPool({
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'medical_inventory',
-    port: process.env.DB_PORT || 3306,
+    port: parseInt(process.env.DB_PORT) || 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 30000,
+    charset: 'utf8mb4',
+    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost'
+        ? { rejectUnauthorized: false }
+        : undefined
 });
 
-module.exports = pool.promise();
+const promisePool = pool.promise();
+module.exports = promisePool;
 
-// اختبار الاتصال فور تشغيل السيرفر
-pool.getConnection((err, connection) => {
-    if (err) {
-        console.error('❌ فشل الاتصال بقاعدة البيانات.');
-        console.error('Exact Error Code:', err.code);
-        console.error('Error Message:', err.message);
-        if (err.code === 'ECONNREFUSED') {
-            console.error('💡 التلميح: تأكد من أن سيرفر MySQL/XAMPP يعمل على المنفذ الصحيح وكلمات المرور صحيحة.');
-        }
-    } else {
+// Non-fatal startup connectivity check — logs result but never crashes the process
+promisePool.query('SELECT 1')
+    .then(() => {
         console.log('✅ تم الاتصال بقاعدة البيانات (Pool) بنجاح!');
-        connection.release(); // قفل القناة بعد الاختبار
-    }
-});
+    })
+    .catch((err) => {
+        console.error('⚠️  DB connectivity check failed (server will still start):');
+        console.error('   Code:', err.code);
+        console.error('   Message:', err.message);
+    });
