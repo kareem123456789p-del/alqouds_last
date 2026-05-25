@@ -1,0 +1,18 @@
+/* Logo styling in the header */
+.page-info {
+    display: flex;
+    align-items: center;
+}
+
+.header-logo {
+    height: 45px;
+    opacity: 0.8;
+    filter: opacity(80%);
+    margin-right: 15px;
+    object-fit: contain;
+    transition: opacity 0.2s ease;
+}
+
+.header-logo:hover {
+    opacity: 1;
+}
