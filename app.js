@@ -24,7 +24,7 @@ const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
 
 // ── Global Auth Guard Middleware ──
-const { requireAuth, sessions } = require('./controllers/authController');
+const { requireAuth, requireAdmin, sessions } = require('./controllers/authController');
 
 app.use((req, res, next) => {
     const requestPath = req.path;
@@ -52,6 +52,20 @@ app.use((req, res, next) => {
 
     // 4. Require authentication for all other routes
     requireAuth(req, res, next);
+});
+
+// Attach the branch scope to req.branchId globally (after auth)
+const branchScope = require('./middleware/branchScope');
+app.use((req, res, next) => {
+    // Skip public routes like auth and static assets
+    if (!req.user && req.path.startsWith('/api/auth')) {
+        return next();
+    }
+    // Only apply branchScope if req.user exists (i.e. auth guard passed)
+    if (req.user) {
+        return branchScope(req, res, next);
+    }
+    next();
 });
 
 // خدمة الملفات الثابتة (HTML, CSS, JS)
@@ -90,7 +104,7 @@ const retailRoutes = require('./routes/retailRoutes');
 app.use('/api/products', productRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/doctors', doctorRoutes);
-app.use('/api/transfer', transferRoutes);
+app.use('/api/transfers', transferRoutes);
 app.use('/api/warehouse', warehouseRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/imports', importRoutes);
@@ -103,6 +117,9 @@ app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/retail', retailRoutes);
 
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/api/admin', adminRoutes);
+
 // --- إضافة مهمة: صيد الأخطاء (Error Handler) ---
 // السطر ده هيخلي السيرفر يطبع لك السبب الحقيقي لخطأ 500 في الـ Terminal عندك
 app.use((err, req, res, next) => {
@@ -111,17 +128,24 @@ app.use((err, req, res, next) => {
 });
 
 
-// Root route → serve the login page as the landing page (or redirect to dashboard if already authenticated)
+// Root route → role-aware redirect for authenticated users, login page for guests
 app.get('/', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     const token = req.cookies?.session_token;
     if (token && sessions.has(token)) {
         const session = sessions.get(token);
         if (Date.now() <= session.expiresAt) {
-            return res.redirect('/index.html');
+            // ADMIN → admin dashboard, everyone else → main operational system
+            const isAdmin = (session.role === 'ADMIN' || session.role === 'Admin' || session.role === 'Super Admin');
+            return res.redirect(isAdmin ? '/dashboard' : '/index.html');
         }
     }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Dashboard route (protected: requires auth + ADMIN role)
+app.get('/dashboard', requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Start Server

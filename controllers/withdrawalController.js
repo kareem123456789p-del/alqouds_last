@@ -10,9 +10,9 @@ const getStats = async (req, res, next) => {
         const [[{ monthly_total }]] = await pool.execute(`
             SELECT COALESCE(SUM(amount), 0) AS monthly_total
             FROM employee_withdrawals
-            WHERE MONTH(created_at) = MONTH(CURDATE())
-              AND YEAR(created_at)  = YEAR(CURDATE())
-        `);
+            WHERE branch_id = ? AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM created_at)  = EXTRACT(YEAR FROM CURRENT_DATE)
+        `, [req.branchId]);
 
         // 2. Employee with most withdrawals (by total amount this month)
         const [topRows] = await pool.execute(`
@@ -21,12 +21,12 @@ const getStats = async (req, res, next) => {
                    SUM(ew.amount) AS total_amount
             FROM employee_withdrawals ew
             JOIN staff s ON s.id = ew.staff_id
-            WHERE MONTH(ew.created_at) = MONTH(CURDATE())
-              AND YEAR(ew.created_at)  = YEAR(CURDATE())
+            WHERE ew.branch_id = ? AND EXTRACT(MONTH FROM ew.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM ew.created_at)  = EXTRACT(YEAR FROM CURRENT_DATE)
             GROUP BY s.id, s.name
             ORDER BY total_amount DESC
             LIMIT 1
-        `);
+        `, [req.branchId]);
 
         // 3. Employees whose TOTAL monthly withdrawals exceed 50% of base_salary
         const [alertRows] = await pool.execute(`
@@ -34,11 +34,11 @@ const getStats = async (req, res, next) => {
                    SUM(ew.amount) AS monthly_total
             FROM employee_withdrawals ew
             JOIN staff s ON s.id = ew.staff_id
-            WHERE MONTH(ew.created_at) = MONTH(CURDATE())
-              AND YEAR(ew.created_at)  = YEAR(CURDATE())
+            WHERE ew.branch_id = ? AND EXTRACT(MONTH FROM ew.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM ew.created_at)  = EXTRACT(YEAR FROM CURRENT_DATE)
             GROUP BY s.id, s.name, s.base_salary
             HAVING SUM(ew.amount) > (COALESCE(s.base_salary, 0) * 0.5)
-        `);
+        `, [req.branchId]);
 
         res.json({
             monthly_total: parseFloat(monthly_total),
@@ -62,9 +62,10 @@ const getWithdrawals = async (req, res, next) => {
                 s.base_salary
             FROM employee_withdrawals ew
             JOIN staff s ON s.id = ew.staff_id
+            WHERE ew.branch_id = ?
             ORDER BY ew.created_at DESC
             LIMIT 50
-        `);
+        `, [req.branchId]);
 
         /* Compute monthly running totals in JS (per employee, within same month) */
         const monthlySums = {};
@@ -108,17 +109,17 @@ const createWithdrawal = async (req, res, next) => {
         const [[{ monthly_sum }]] = await pool.execute(`
             SELECT COALESCE(SUM(amount), 0) AS monthly_sum
             FROM employee_withdrawals
-            WHERE staff_id = ?
-              AND MONTH(created_at) = MONTH(CURDATE())
-              AND YEAR(created_at)  = YEAR(CURDATE())
-        `, [staff_id]);
+            WHERE staff_id = ? AND branch_id = ?
+              AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM created_at)  = EXTRACT(YEAR FROM CURRENT_DATE)
+        `, [staff_id, req.branchId]);
 
         const newTotal = parseFloat(monthly_sum) + parseFloat(amount);
         const is_high_ratio = newTotal > parseFloat(staff.base_salary || 0) * 0.5;
 
         const [result] = await pool.execute(
-            'INSERT INTO employee_withdrawals (staff_id, amount, reason, category) VALUES (?, ?, ?, ?)',
-            [staff_id, amount, reason, category || 'Personal']
+            'INSERT INTO employee_withdrawals (staff_id, amount, reason, category, branch_id) VALUES (?, ?, ?, ?, ?)',
+            [staff_id, amount, reason, category || 'Personal', req.branchId]
         );
 
         res.status(201).json({

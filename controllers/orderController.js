@@ -43,7 +43,7 @@ async function resolveClient(connection, rawClientId) {
 }
 
 // ── Helper: update client debt and log transaction ────────────────────────────
-async function updateClientDebt(connection, client, isDoctor, amount, type, orderId) {
+async function updateClientDebt(connection, client, isDoctor, amount, type, orderId, branchId) {
     if (isDoctor) {
         await connection.execute(
             'UPDATE doctors SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
@@ -228,7 +228,7 @@ const createOrder = async (req, res, next) => {
         }
 
         // Update customer ledger immediately on order creation (Pending status)
-        await updateClientDebt(connection, client, isDoctor, totalAmount, 'ORDER', orderId);
+        await updateClientDebt(connection, client, isDoctor, totalAmount, 'ORDER', orderId, req.branchId);
 
         await connection.commit();
         res.status(201).json({ success: true, order_id: orderId, order_number: orderNumber, total_amount: totalAmount });
@@ -376,7 +376,7 @@ const processReturn = async (req, res, next) => {
 
         if (totalReturnAmount > 0) {
             // Negative amount = debt reduction
-            await updateClientDebt(connection, client, isDoctor, -totalReturnAmount, 'RETURN', orderId);
+            await updateClientDebt(connection, client, isDoctor, -totalReturnAmount, 'RETURN', orderId, req.branchId);
 
             const [allItems] = await connection.execute(
                 'SELECT qty, IFNULL(returned_qty, 0) as returned_qty FROM order_items WHERE order_id = ?',
@@ -415,7 +415,7 @@ const cancelOrder = async (req, res, next) => {
 
         // Reverse the debt that was charged on order creation
         if (client && parseFloat(order.total_amount) > 0) {
-            await updateClientDebt(connection, client, isDoctor, -parseFloat(order.total_amount), 'CANCEL', orderId);
+            await updateClientDebt(connection, client, isDoctor, -parseFloat(order.total_amount), 'CANCEL', orderId, req.branchId);
         }
 
         await connection.execute('UPDATE orders SET status = "Cancelled" WHERE id = ?', [orderId]);

@@ -12,13 +12,13 @@ const getStats = async (req, res, next) => {
             SELECT COALESCE(SUM(wi.current_stock * p.price), 0) AS totalValue
             FROM warehouse_inventory wi
             LEFT JOIN products p ON p.id = wi.product_id
-            WHERE p.is_active = 1 AND p.is_deleted = 0
+            WHERE p.is_active = 1 AND p.is_deleted = 0 AND wi.branch_id = ${req.branchId}
         `);
         const [[{ productLines }]] = await pool.execute(`
             SELECT COUNT(DISTINCT wi.product_id) AS productLines 
             FROM warehouse_inventory wi
             LEFT JOIN products p ON p.id = wi.product_id
-            WHERE p.is_active = 1 AND p.is_deleted = 0
+            WHERE p.is_active = 1 AND p.is_deleted = 0 AND wi.branch_id = ${req.branchId}
         `);
         res.json({
             active_warehouses: warehouseCount,
@@ -42,7 +42,7 @@ const getWarehouses = async (req, res, next) => {
                 COALESCE(SUM(CASE WHEN p.is_active = 1 AND p.is_deleted = 0 THEN wi.current_stock ELSE 0 END), 0) AS total_stock,
                 COUNT(DISTINCT CASE WHEN p.is_active = 1 AND p.is_deleted = 0 THEN wi.product_id END) AS product_count
             FROM warehouses w
-            LEFT JOIN warehouse_inventory wi ON wi.warehouse_id = w.id
+            LEFT JOIN warehouse_inventory wi ON wi.warehouse_id = w.id AND wi.branch_id = ${req.branchId}
             LEFT JOIN products p ON wi.product_id = p.id
             GROUP BY w.id, w.name, w.location, w.capacity
             ORDER BY w.id
@@ -73,11 +73,11 @@ const getWarehouseInventory = async (req, res, next) => {
             LEFT JOIN products p ON p.id = wi.product_id
             LEFT JOIN uom bu ON p.base_uom_id = bu.id
             LEFT JOIN uom blku ON p.bulk_uom_id = blku.id
-            WHERE wi.warehouse_id = ? AND wi.current_stock > 0
+            WHERE wi.warehouse_id = ? AND wi.current_stock > 0 AND wi.branch_id = ?
               AND p.is_active = 1 AND p.is_deleted = 0
             ORDER BY p.name, wi.expiry_date ASC
             LIMIT 500
-        `, [id]);
+        `, [id, req.branchId]);
         res.json(rows);
     } catch (err) { next(err); }
 };
@@ -103,9 +103,10 @@ const getMovements = async (req, res, next) => {
             JOIN products p         ON p.id  = il.product_id
             JOIN warehouses w       ON w.id  = il.warehouse_id
             LEFT JOIN local_suppliers ls ON ls.id = il.supplier_id
+            WHERE il.branch_id = ?
             ORDER BY il.created_at DESC
             LIMIT 20
-        `);
+        `, [req.branchId]);
         res.json(rows);
     } catch (err) { next(err); }
 };

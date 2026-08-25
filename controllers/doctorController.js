@@ -3,7 +3,7 @@ const db = require('../db');
 // GET all doctors
 const getAllDoctors = async (req, res) => {
     try {
-        const [doctors] = await db.query('SELECT * FROM doctors ORDER BY created_at DESC');
+        const [doctors] = await db.query('SELECT * FROM doctors WHERE branch_id = ? ORDER BY created_at DESC', [req.branchId]);
         res.json(doctors);
     } catch (error) {
         console.error('Error fetching doctors:', error);
@@ -15,7 +15,7 @@ const getAllDoctors = async (req, res) => {
 const getDoctorById = async (req, res) => {
     try {
         const { id } = req.params;
-        const [doctors] = await db.query('SELECT * FROM doctors WHERE id = ?', [id]);
+        const [doctors] = await db.query('SELECT * FROM doctors WHERE id = ? AND branch_id = ?', [id, req.branchId]);
 
         if (doctors.length === 0) {
             return res.status(404).json({ error: 'الطبيب غير موجود' });
@@ -39,9 +39,9 @@ const createDoctor = async (req, res) => {
         }
 
         const [result] = await db.query(
-            `INSERT INTO doctors (name, specialty, phone, email, license_number, status, location, credit_limit) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [name, specialty, phone || null, email || null, license_number || null, status || 'active', location || null, credit_limit || 60000]
+            `INSERT INTO doctors (name, specialty, phone, email, license_number, status, location, credit_limit, branch_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [name, specialty, phone || null, email || null, license_number || null, status || 'active', location || null, credit_limit || 60000, req.branchId]
         );
 
         // Fetch the newly created doctor
@@ -64,7 +64,7 @@ const updateDoctor = async (req, res) => {
         const { name, specialty, phone, email, address, license_number, status, location, credit_limit } = req.body;
 
         // Check if doctor exists
-        const [existing] = await db.query('SELECT * FROM doctors WHERE id = ?', [id]);
+        const [existing] = await db.query('SELECT * FROM doctors WHERE id = ? AND branch_id = ?', [id, req.branchId]);
         if (existing.length === 0) {
             return res.status(404).json({ error: 'الطبيب غير موجود' });
         }
@@ -73,12 +73,12 @@ const updateDoctor = async (req, res) => {
             `UPDATE doctors 
              SET name = ?, specialty = ?, phone = ?, email = ?, 
                  license_number = ?, status = ?, location = ?, credit_limit = ?
-             WHERE id = ?`,
-            [name, specialty, phone, email, license_number, status, location, credit_limit || 60000, id]
+             WHERE id = ? AND branch_id = ?`,
+            [name, specialty, phone, email, license_number, status, location, credit_limit || 60000, id, req.branchId]
         );
 
         // Fetch updated doctor
-        const [updatedDoctor] = await db.query('SELECT * FROM doctors WHERE id = ?', [id]);
+        const [updatedDoctor] = await db.query('SELECT * FROM doctors WHERE id = ? AND branch_id = ?', [id, req.branchId]);
 
         res.json({
             message: 'تم تحديث بيانات الطبيب بنجاح',
@@ -96,12 +96,12 @@ const deleteDoctor = async (req, res) => {
         const { id } = req.params;
 
         // Check if doctor exists
-        const [existing] = await db.query('SELECT * FROM doctors WHERE id = ?', [id]);
+        const [existing] = await db.query('SELECT * FROM doctors WHERE id = ? AND branch_id = ?', [id, req.branchId]);
         if (existing.length === 0) {
             return res.status(404).json({ error: 'الطبيب غير موجود' });
         }
 
-        await db.query('DELETE FROM doctors WHERE id = ?', [id]);
+        await db.query('DELETE FROM doctors WHERE id = ? AND branch_id = ?', [id, req.branchId]);
 
         res.json({ message: 'تم حذف الطبيب بنجاح' });
     } catch (error) {
@@ -132,12 +132,12 @@ const getDoctorOrders = async (req, res) => {
                  FROM order_items oi 
                  WHERE oi.order_id = o.id) as total_items
             FROM orders o
-            WHERE o.client_id = ?
+            WHERE o.client_id = ? AND o.branch_id = ?
             ORDER BY o.created_at DESC
             LIMIT 10
         `;
 
-        const [orders] = await db.query(query, [id]);
+        const [orders] = await db.query(query, [id, req.branchId]);
         res.json(orders);
     } catch (error) {
         console.error('Error fetching doctor orders:', error);

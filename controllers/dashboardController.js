@@ -11,11 +11,11 @@ const getDashboardStats = async (req, res, next) => {
             [clientsCountResult],
             [warehousesCountResult]
         ] = await Promise.all([
-            pool.execute("SELECT COUNT(*) as count FROM orders WHERE status = 'Pending'"),
-            pool.execute("SELECT SUM(total_amount) as total FROM orders WHERE status = 'Dispatched'"),
-            pool.execute("SELECT IFNULL(SUM(w.current_stock * p.price), 0) as total_value, IFNULL(SUM(w.current_stock), 0) as total_items FROM warehouse_inventory w JOIN products p ON w.product_id = p.id"),
-            pool.execute("SELECT COUNT(*) as count FROM doctors"),
-            pool.execute("SELECT COUNT(*) as count FROM warehouses")
+            pool.execute("SELECT COUNT(*) as count FROM orders WHERE status = 'Pending' AND branch_id = ?", [req.branchId]),
+            pool.execute("SELECT SUM(total_amount) as total FROM orders WHERE status = 'Dispatched' AND branch_id = ?", [req.branchId]),
+            pool.execute("SELECT COALESCE(SUM(w.current_stock * p.price), 0) as total_value, COALESCE(SUM(w.current_stock), 0) as total_items FROM warehouse_inventory w JOIN products p ON w.product_id = p.id WHERE w.branch_id = ?", [req.branchId]),
+            pool.execute("SELECT COUNT(*) as count FROM doctors WHERE branch_id = ?", [req.branchId]),
+            pool.execute("SELECT COUNT(*) as count FROM warehouses WHERE branch_id = ?", [req.branchId])
         ]);
 
         const stats = {

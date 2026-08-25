@@ -34,13 +34,13 @@ const recordPayment = async (req, res, next) => {
 
         // 3. Decouple to find client and update debt
         if (isDoctor) {
-            const [[doc]] = await connection.execute('SELECT id, IFNULL(total_debt, 0) as total_debt FROM doctors WHERE id = ?', [id]);
+            const [[doc]] = await connection.execute('SELECT id, COALESCE(total_debt, 0) as total_debt FROM doctors WHERE id = ?', [id]);
             if (!doc) throw new Error('Doctor not found.');
             currentDebt = parseFloat(doc.total_debt);
 
             await connection.execute('UPDATE doctors SET total_debt = total_debt - ? WHERE id = ?', [paymentAmount, id]);
         } else {
-            const [[pharm]] = await connection.execute('SELECT id, IFNULL(total_debt, 0) as total_debt FROM pharmacies WHERE id = ?', [id]);
+            const [[pharm]] = await connection.execute('SELECT id, COALESCE(total_debt, 0) as total_debt FROM pharmacies WHERE id = ?', [id]);
             if (!pharm) throw new Error('Pharmacy not found.');
             currentDebt = parseFloat(pharm.total_debt);
 
@@ -91,8 +91,8 @@ const getRecentPayments = async (req, res, next) => {
             SELECT 
                 p.id, p.amount, p.payment_method, p.reference_no, p.notes, p.created_at,
                 COALESCE(d.name, ph.name) as client_name,
-                IF(p.client_id IS NOT NULL, p.client_id, p.pharmacy_id) as client_id,
-                IF(p.client_id IS NOT NULL, 'doc', 'pharm') as client_type
+                CASE WHEN p.client_id IS NOT NULL THEN p.client_id ELSE p.pharmacy_id END as client_id,
+                CASE WHEN p.client_id IS NOT NULL THEN 'doc' ELSE 'pharm' END as client_type
             FROM payments p
             LEFT JOIN doctors d ON p.client_id = d.id
             LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
@@ -116,9 +116,9 @@ const getClientMonthly = async (req, res, next) => {
 
         let query = '';
         if (typeClean === 'doc') {
-            query = `SELECT SUM(amount) as monthly_sum FROM payments WHERE client_id = ? AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())`;
+            query = `SELECT SUM(amount) as monthly_sum FROM payments WHERE client_id = ? AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)`;
         } else if (typeClean === 'pharm') {
-            query = `SELECT SUM(amount) as monthly_sum FROM payments WHERE pharmacy_id = ? AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())`;
+            query = `SELECT SUM(amount) as monthly_sum FROM payments WHERE pharmacy_id = ? AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)`;
         } else {
             return res.status(400).json({ error: 'Invalid client prefix' });
         }
@@ -136,7 +136,7 @@ const getSummary = async (req, res, next) => {
         const [[{ monthly_total }]] = await pool.execute(`
             SELECT SUM(amount) as monthly_total 
             FROM payments 
-            WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())
+            WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
         `);
 
         // Total Market Debt (Sum of all > 0 total_debt from docs + pharms)

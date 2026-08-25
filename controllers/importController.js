@@ -43,9 +43,10 @@ const getImports = async (req, res, next) => {
             LEFT JOIN uom blku ON p.bulk_uom_id = blku.id
             JOIN local_suppliers ls ON ls.id = il.supplier_id
             LEFT JOIN warehouses w ON w.id = il.warehouse_id
+            WHERE il.branch_id = ?
             ORDER BY il.created_at DESC
             LIMIT 50
-        `);
+        `, [req.branchId]);
         res.json(rows);
     } catch (err) {
         next(err);
@@ -132,30 +133,32 @@ const createImport = async (req, res, next) => {
 
                 if (inventoryCheck.length > 0) {
                     await connection.execute(
-                        'UPDATE warehouse_inventory SET current_stock = current_stock + ?, qty_threshold = ?, expiry_month_threshold = ?, unit_price = ? WHERE id = ?',
-                        [qty, qty_threshold || 20, expiry_month_threshold || 3, price, inventoryCheck[0].id]
+                        'UPDATE warehouse_inventory SET current_stock = current_stock + ?, qty_threshold = ?, expiry_month_threshold = ?, unit_price = ? WHERE id = ? AND branch_id = ?',
+                        [qty, qty_threshold || 20, expiry_month_threshold || 3, price, inventoryCheck[0].id, req.branchId]
                     );
                 } else {
                     await connection.execute(
-                        'INSERT INTO warehouse_inventory (warehouse_id, product_id, current_stock, batch_number, expiry_date, qty_threshold, expiry_month_threshold, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                        [warehouse_id, product_id, qty, batchQueryValue, expiryQueryValue, qty_threshold || 20, expiry_month_threshold || 3, price]
+                        `INSERT INTO warehouse_inventory
+                        (warehouse_id, product_id, current_stock, batch_number, expiry_date, qty_threshold, expiry_month_threshold, unit_price, branch_id)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [warehouse_id, product_id, qty, batchQueryValue, expiryQueryValue, qty_threshold || 20, expiry_month_threshold || 3, price, req.branchId]
                     );
                 }
 
                 // 3. Log the import — includes shipment_id and invoice_image for archive
                 const [importLogResult] = await connection.execute(
                     `INSERT INTO import_logs
-                        (product_id, supplier_id, quantity, unit_price, warehouse_id, shipment_id, invoice_image)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [product_id, supplier_id, qty, price, warehouse_id, shipmentId, invoiceImagePath]
+                        (product_id, supplier_id, quantity, unit_price, warehouse_id, shipment_id, invoice_image, branch_id)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [product_id, supplier_id, qty, price, warehouse_id, shipmentId, invoiceImagePath, req.branchId]
                 );
 
                 const importLogId = importLogResult.insertId;
 
                 // 4. Log the supplier transaction
                 await connection.execute(
-                    'INSERT INTO supplier_transactions (supplier_id, import_log_id, total_amount, transaction_type) VALUES (?, ?, ?, ?)',
-                    [supplier_id, importLogId, totalAmount, 'IMPORT_CHARGE']
+                    'INSERT INTO supplier_transactions (supplier_id, import_log_id, total_amount, transaction_type, branch_id) VALUES (?, ?, ?, ?, ?)',
+                    [supplier_id, importLogId, totalAmount, 'IMPORT_CHARGE', req.branchId]
                 );
             }
 
@@ -210,8 +213,8 @@ const processImportReturn = async (req, res, next) => {
             // 2. Decrease warehouse inventory (FEFO Logic across batches)
             if (importLog.warehouse_id) {
                 const [batches] = await connection.execute(
-                    'SELECT id, current_stock FROM warehouse_inventory WHERE warehouse_id = ? AND product_id = ? AND current_stock > 0 ORDER BY expiry_date ASC',
-                    [importLog.warehouse_id, importLog.product_id]
+                    'SELECT id, current_stock FROM warehouse_inventory WHERE warehouse_id = ? AND product_id = ? AND branch_id = ? AND current_stock > 0 ORDER BY expiry_date ASC',
+                    [importLog.warehouse_id, importLog.product_id, req.branchId]
                 );
 
                 const totalStock = batches.reduce((sum, b) => sum + b.current_stock, 0);
@@ -245,8 +248,8 @@ const processImportReturn = async (req, res, next) => {
 
             // 4. Log the supplier transaction (credit)
             await connection.execute(
-                'INSERT INTO supplier_transactions (supplier_id, import_log_id, total_amount, transaction_type) VALUES (?, ?, ?, ?)',
-                [importLog.supplier_id, importLogId, -itemReturnValue, 'RETURN_CREDIT']
+                'INSERT INTO supplier_transactions (supplier_id, import_log_id, total_amount, transaction_type, branch_id) VALUES (?, ?, ?, ?, ?)',
+                [importLog.supplier_id, importLogId, -itemReturnValue, 'RETURN_CREDIT', req.branchId]
             );
 
             // Check if fully returned

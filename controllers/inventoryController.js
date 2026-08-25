@@ -7,6 +7,7 @@ const pool = require('../config/db');
  */
 exports.getFullInventory = async (req, res) => {
     try {
+        const branchFilter = `AND wi.branch_id = ${parseInt(req.branchId)}`;
         const [rows] = await pool.execute(`
             SELECT
                 wi.id           AS inventory_id,
@@ -23,7 +24,7 @@ exports.getFullInventory = async (req, res) => {
                 p.purchase_price,
                 wi.unit_price AS batch_unit_price,
                 bu.name         AS base_uom,
-                IF(p.bulk_uom_id IS NOT NULL, 1, 0) AS has_bulk_uom,
+                CASE WHEN p.bulk_uom_id IS NOT NULL THEN 1 ELSE 0 END AS has_bulk_uom,
                 blku.name       AS bulk_uom,
                 p.conversion_factor
             FROM products p
@@ -31,7 +32,7 @@ exports.getFullInventory = async (req, res) => {
             LEFT JOIN warehouses w            ON wi.warehouse_id = w.id
             LEFT JOIN uom bu                  ON p.base_uom_id = bu.id
             LEFT JOIN uom blku                ON p.bulk_uom_id = blku.id
-            WHERE p.is_active = 1 AND p.is_deleted = 0
+            WHERE p.is_active = 1 AND p.is_deleted = 0 ${branchFilter}
             ORDER BY wi.expiry_date ASC
         `);
         res.json(rows || []);
@@ -50,9 +51,9 @@ exports.getProductBatches = async (req, res) => {
         const [rows] = await pool.execute(`
             SELECT id, batch_number, expiry_date, current_stock
             FROM warehouse_inventory
-            WHERE warehouse_id = ? AND product_id = ? AND current_stock > 0
+            WHERE warehouse_id = ? AND product_id = ? AND current_stock > 0 AND branch_id = ?
             ORDER BY expiry_date ASC
-        `, [warehouseId, productId]);
+        `, [warehouseId, productId, req.branchId]);
         res.json(rows || []);
     } catch (err) {
         console.error('❌ Batch Fetch Error:', err);
@@ -78,14 +79,15 @@ exports.updateInventoryRecord = async (req, res) => {
                 expiry_date            = ?,
                 qty_threshold          = ?,
                 expiry_month_threshold = ?
-            WHERE id = ?
+            WHERE id = ? AND branch_id = ?
         `, [
             current_stock,
             batch_number  || null,
             expiry_date   || null,
             qty_threshold          !== undefined ? qty_threshold          : 20,
             expiry_month_threshold !== undefined ? expiry_month_threshold : 3,
-            id
+            id,
+            req.branchId
         ]);
 
         if (result.affectedRows === 0) {
@@ -93,8 +95,8 @@ exports.updateInventoryRecord = async (req, res) => {
         }
         res.json({ message: 'Inventory updated successfully' });
     } catch (err) {
-        console.error('❌ Inventory Update Error:', err.sqlMessage || err.message);
-        res.status(500).json({ error: 'Failed to update inventory record', details: err.sqlMessage || err.message });
+        console.error('❌ Inventory Update Error:', err.message);
+        res.status(500).json({ error: 'Failed to update inventory record', details: err.message });
     }
 };
 
@@ -131,8 +133,8 @@ exports.deleteInventoryRecord = async (req, res) => {
         // is immediately clean. Any surviving rows are also blocked by the JOIN
         // filter in warehouseController.getWarehouseInventory (the Double-Lock).
         const [wipeResult] = await pool.execute(
-            'DELETE FROM warehouse_inventory WHERE product_id = ?',
-            [id]
+            'DELETE FROM warehouse_inventory WHERE product_id = ? AND branch_id = ?',
+            [id, req.branchId]
         );
         console.log(`[MASTER-MIRROR DELETE] ✅ Step 2 done: Wiped ${wipeResult.affectedRows} warehouse_inventory row(s) for product_id=${id}`);
 
@@ -142,7 +144,7 @@ exports.deleteInventoryRecord = async (req, res) => {
             warehouse_rows_deleted: wipeResult.affectedRows
         });
     } catch (err) {
-        console.error('❌ [MASTER-MIRROR DELETE] Error:', err.sqlMessage || err.message);
-        res.status(500).json({ error: 'Failed to deactivate product', details: err.sqlMessage || err.message });
+        console.error('❌ [MASTER-MIRROR DELETE] Error:', err.message);
+        res.status(500).json({ error: 'Failed to deactivate product', details: err.message });
     }
 };

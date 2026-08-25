@@ -16,19 +16,19 @@ exports.searchProducts = async (req, res, next) => {
                 COALESCE((
                     SELECT SUM(current_stock) 
                     FROM warehouse_inventory 
-                    WHERE product_id = p.id AND warehouse_id = ?
+                    WHERE product_id = p.id AND warehouse_id = ? AND branch_id = ?
                 ), 0) as total_stock,
                 (
                     SELECT expiry_date 
                     FROM warehouse_inventory 
-                    WHERE product_id = p.id AND warehouse_id = ? AND current_stock > 0 
+                    WHERE product_id = p.id AND warehouse_id = ? AND branch_id = ? AND current_stock > 0 
                     ORDER BY expiry_date ASC LIMIT 1
                 ) as nearest_expiry
             FROM products p
             WHERE p.is_deleted = 0 AND p.is_active = 1
             AND (p.name LIKE ? OR p.sku LIKE ?)
             LIMIT 50
-        `, [warehouseId, warehouseId, searchPattern, searchPattern]);
+        `, [warehouseId, req.branchId, warehouseId, req.branchId, searchPattern, searchPattern]);
 
         res.json(products);
     } catch (err) { next(err); }
@@ -196,8 +196,8 @@ exports.recordSale = async (req, res, next) => {
 
             // FEFO Deduction from the selected warehouse
             const [batches] = await connection.execute(
-                'SELECT id, current_stock FROM warehouse_inventory WHERE product_id = ? AND warehouse_id = ? AND current_stock > 0 ORDER BY expiry_date ASC',
-                [product_id, sourceWarehouseId]
+                'SELECT id, current_stock FROM warehouse_inventory WHERE product_id = ? AND warehouse_id = ? AND branch_id = ? AND current_stock > 0 ORDER BY expiry_date ASC',
+                [product_id, sourceWarehouseId, req.branchId]
             );
 
             const availableStock = batches.reduce((sum, b) => sum + b.current_stock, 0);
@@ -226,8 +226,8 @@ exports.recordSale = async (req, res, next) => {
 
         for (const ins of itemInserts) {
             await connection.execute(
-                "INSERT INTO retail_sale_items (sale_id, product_id, qty, cost_price, selling_price, profit_amount) VALUES (?, ?, ?, ?, ?, ?)",
-                [saleId, ins.product_id, ins.qty, ins.costPrice, ins.sellingPrice, ins.itemProfit]
+                "INSERT INTO retail_sale_items (sale_id, product_id, qty, cost_price, selling_price, profit_amount, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [saleId, ins.product_id, ins.qty, ins.costPrice, ins.sellingPrice, ins.itemProfit, req.branchId]
             );
         }
 
@@ -320,16 +320,16 @@ exports.processReturn = async (req, res, next) => {
 
             // 2. Restore warehouse_inventory (Find the most recent batch or create one)
             const [batches] = await connection.execute(
-                'SELECT id FROM warehouse_inventory WHERE product_id = ? AND warehouse_id = ? ORDER BY id DESC LIMIT 1',
-                [product_id, warehouseId]
+                'SELECT id FROM warehouse_inventory WHERE product_id = ? AND warehouse_id = ? AND branch_id = ? ORDER BY id DESC LIMIT 1',
+                [product_id, warehouseId, req.branchId]
             );
 
             if (batches.length > 0) {
                 await connection.execute('UPDATE warehouse_inventory SET current_stock = current_stock + ? WHERE id = ?', [qty, batches[0].id]);
             } else {
                 await connection.execute(
-                    'INSERT INTO warehouse_inventory (product_id, warehouse_id, current_stock) VALUES (?, ?, ?)',
-                    [product_id, warehouseId, qty]
+                    'INSERT INTO warehouse_inventory (product_id, warehouse_id, current_stock, branch_id) VALUES (?, ?, ?, ?)',
+                    [product_id, warehouseId, qty, req.branchId]
                 );
             }
         }
@@ -348,8 +348,8 @@ exports.processReturn = async (req, res, next) => {
         // Insert Negative Sale Items
         for (const ins of returnInserts) {
             await connection.execute(
-                "INSERT INTO retail_sale_items (sale_id, product_id, qty, cost_price, selling_price, profit_amount) VALUES (?, ?, ?, ?, ?, ?)",
-                [returnSaleId, ins.product_id, ins.qty, ins.costPrice, ins.sellingPrice, ins.itemProfit]
+                "INSERT INTO retail_sale_items (sale_id, product_id, qty, cost_price, selling_price, profit_amount, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [returnSaleId, ins.product_id, ins.qty, ins.costPrice, ins.sellingPrice, ins.itemProfit, req.branchId]
             );
         }
 

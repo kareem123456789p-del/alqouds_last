@@ -45,20 +45,20 @@
             <div class="login-card">
                 <form id="loginForm" autocomplete="on" novalidate>
 
-                    <!-- Email / Username -->
+                    <!-- Registration Number -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <span class="form-label">Username or Email</span>
-                            <span class="form-label-ar">| اسم المستخدم أو البريد الإلكتروني</span>
+                            <span class="form-label">Registration Number</span>
+                            <span class="form-label-ar">| رقم التسجيل</span>
                         </div>
                         <div class="input-wrapper">
-                            <i class="fa-solid fa-user input-icon-right"></i>
+                            <i class="fa-solid fa-id-card input-icon-right"></i>
                             <input
-                                type="email"
-                                id="login-email"
-                                name="email"
-                                placeholder="example@center.com"
-                                autocomplete="email"
+                                type="text"
+                                id="login-registration-number"
+                                name="registration_number"
+                                placeholder="1101"
+                                autocomplete="username"
                                 required
                             >
                         </div>
@@ -131,7 +131,9 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.authenticated) {
-                        window.location.href = '/index.html';
+                        // Role-based redirect: ADMIN → dashboard, non-ADMIN → main system
+                        const isAdmin = (data.role === 'ADMIN' || data.role === 'Admin' || data.role === 'Super Admin');
+                        window.location.href = isAdmin ? '/dashboard' : '/index.html';
                     }
                 }
             } catch (_) { /* ignore — not logged in */ }
@@ -173,14 +175,14 @@
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const email    = document.getElementById('login-email').value.trim();
+            const registration_number = document.getElementById('login-registration-number').value.trim();
             const password = document.getElementById('login-password').value;
             const remember = document.getElementById('remember-session').checked;
             const btn      = document.getElementById('login-btn');
             const btnText  = document.getElementById('login-btn-text');
 
-            if (!email || !password) {
-                showToast('Please enter both email and password.', 'error');
+            if (!registration_number || !password) {
+                showToast('Please enter both registration number and password.', 'error');
                 return;
             }
 
@@ -193,7 +195,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ email, password, remember })
+                    body: JSON.stringify({ registration_number, password, remember })
                 });
 
                 const data = await res.json();
@@ -216,7 +218,7 @@
         });
 
         // ── Enter key support on inputs ──────────────────────────────
-        document.getElementById('login-email').addEventListener('keydown', function(e) {
+        document.getElementById('login-registration-number').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 document.getElementById('login-password').focus();

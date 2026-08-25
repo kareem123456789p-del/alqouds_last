@@ -3,7 +3,7 @@ const pool = require('../db');
 // Generate next supplier code like LOC-XXXX
 async function nextCode() {
     const [[{ maxCode }]] = await pool.execute(
-        `SELECT MAX(CAST(SUBSTRING(supplier_code, 5) AS UNSIGNED)) AS maxCode
+        `SELECT MAX(CAST(SUBSTRING(supplier_code FROM 5) AS INTEGER)) AS maxCode
          FROM local_suppliers`
     );
     const next = (maxCode || 200) + 1;
@@ -16,8 +16,8 @@ async function nextCode() {
 const getAll = async (req, res, next) => {
     try {
         const { search = '', city = '' } = req.query;
-        let sql = `SELECT * FROM local_suppliers WHERE 1=1`;
-        const params = [];
+        let sql = `SELECT * FROM local_suppliers WHERE branch_id = ?`;
+        const params = [req.branchId];
 
         if (search) {
             sql += ` AND (company_name LIKE ? OR contact_person LIKE ?)`;
@@ -40,7 +40,7 @@ const getAll = async (req, res, next) => {
 const getOne = async (req, res, next) => {
     try {
         const [[row]] = await pool.execute(
-            'SELECT * FROM local_suppliers WHERE id = ?', [req.params.id]
+            'SELECT * FROM local_suppliers WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]
         );
         if (!row) return res.status(404).json({ error: 'Supplier not found' });
         res.json(row);
@@ -59,9 +59,9 @@ const create = async (req, res, next) => {
     try {
         const code = await nextCode();
         const [result] = await pool.execute(
-            `INSERT INTO local_suppliers (supplier_code, company_name, contact_person, phone, city_area, notes)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [code, company_name.trim(), contact_person.trim(), phone.trim(), city_area.trim(), notes?.trim() || null]
+            `INSERT INTO local_suppliers (supplier_code, company_name, contact_person, phone, city_area, notes, branch_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [code, company_name.trim(), contact_person.trim(), phone.trim(), city_area.trim(), notes?.trim() || null, req.branchId]
         );
         const [[newRow]] = await pool.execute('SELECT * FROM local_suppliers WHERE id = ?', [result.insertId]);
         res.status(201).json(newRow);
@@ -80,8 +80,8 @@ const update = async (req, res, next) => {
         await pool.execute(
             `UPDATE local_suppliers
              SET company_name=?, contact_person=?, phone=?, city_area=?, notes=?
-             WHERE id=?`,
-            [company_name.trim(), contact_person.trim(), phone.trim(), city_area.trim(), notes?.trim() || null, req.params.id]
+             WHERE id=? AND branch_id=?`,
+            [company_name.trim(), contact_person.trim(), phone.trim(), city_area.trim(), notes?.trim() || null, req.params.id, req.branchId]
         );
         res.json({ success: true });
     } catch (err) { next(err); }
@@ -92,7 +92,7 @@ const update = async (req, res, next) => {
  */
 const remove = async (req, res, next) => {
     try {
-        await pool.execute('DELETE FROM local_suppliers WHERE id = ?', [req.params.id]);
+        await pool.execute('DELETE FROM local_suppliers WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]);
         res.json({ success: true });
     } catch (err) { next(err); }
 };
@@ -120,10 +120,14 @@ const getHistory = async (req, res, next) => {
             FROM supplier_transactions st
             JOIN import_logs il ON st.import_log_id = il.id
             JOIN products p ON il.product_id = p.id
+            JOIN local_suppliers ls ON st.supplier_id = ls.id
             WHERE st.supplier_id = ?
               AND st.transaction_type = 'IMPORT_CHARGE'
+              AND ls.branch_id = ?
+              AND st.branch_id = ?
+              AND il.branch_id = ?
             ORDER BY st.created_at DESC
-        `, [supplierId]);
+        `, [supplierId, req.branchId, req.branchId, req.branchId]);
 
         // Group rows by shipment_group
         const shipmentMap = new Map();
@@ -178,10 +182,11 @@ const getHistory = async (req, res, next) => {
 
         // ── Overall totals (all transaction types for balance) ────────────────
         const [[{ totalBalance }]] = await pool.execute(`
-            SELECT COALESCE(SUM(total_amount), 0) AS totalBalance
-            FROM supplier_transactions
-            WHERE supplier_id = ?
-        `, [supplierId]);
+            SELECT COALESCE(SUM(st.total_amount), 0) AS totalBalance
+            FROM supplier_transactions st
+            JOIN local_suppliers ls ON st.supplier_id = ls.id
+            WHERE st.supplier_id = ? AND ls.branch_id = ? AND st.branch_id = ?
+        `, [supplierId, req.branchId, req.branchId]);
 
         res.json({
             total_transactions_count: shipments.length,

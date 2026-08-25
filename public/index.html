@@ -32,9 +32,17 @@
             </div>
 
             <div class="top-actions">
+                <!-- Admin Dashboard Link (visible only to ADMINs) -->
+                <a id="admin-dashboard-link" href="/dashboard" style="display:none; text-decoration:none; color:#2563eb; font-weight:600; font-size:0.875rem; padding:0.5rem 1rem; border:1px solid #dbeafe; border-radius:6px; background:#eff6ff; align-items:center; gap:0.4rem;">
+                    <i class="fa-solid fa-gauge-high"></i> لوحة التحكم
+                </a>
                 <!-- Notification Bell -->
                 <button class="icon-btn">
                     <i class="fa-regular fa-bell"></i>
+                </button>
+                <!-- Logout -->
+                <button class="icon-btn" onclick="(async()=>{await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login.html';})()" title="تسجيل الخروج">
+                    <i class="fa-solid fa-right-from-bracket" style="color:#ef4444;"></i>
                 </button>
             </div>
         </header>
@@ -46,7 +54,25 @@
     </main>
 
 
-
+    <!-- Show admin dashboard link only for ADMIN role -->
+    <script>
+        (function showAdminLinkIfAdmin() {
+            // Wait for authGuard.js to populate window.__alqudsUser
+            const check = setInterval(() => {
+                if (window.__alqudsUser) {
+                    clearInterval(check);
+                    const role = window.__alqudsUser.role;
+                    const isAdmin = (role === 'ADMIN' || role === 'Admin' || role === 'Super Admin');
+                    if (isAdmin) {
+                        const link = document.getElementById('admin-dashboard-link');
+                        if (link) link.style.display = 'flex';
+                    }
+                }
+            }, 100);
+            // Stop checking after 5 seconds
+            setTimeout(() => clearInterval(check), 5000);
+        })();
+    </script>
 
     <script src="js/main.js?v=1003"></script>
 </body>

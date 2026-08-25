@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Al-Quds Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+        }
+        .navbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .navbar-brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+        }
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .logout-btn:hover {
+            text-decoration: underline;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .page-header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        
+        .dashboard-content {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 0.875rem;
+        }
+        td { font-size: 0.875rem; }
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-disabled { background: #f3f4f6; color: #4b5563; }
+        
+        .btn-icon {
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+        .btn-icon:hover { color: #111827; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+        
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            box-sizing: border-box;
+        }
+        
+        .permissions-section { margin-top: 1.5rem; }
+        .permission-category {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+        }
+        .permission-category h4 { margin: 0 0 0.5rem 0; font-size: 0.875rem; }
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+
+        #admin-panel { display: none; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <i class="fa-solid fa-hospital"></i>
+            Al-Quds Center
+        </div>
+        <div class="navbar-menu">
+            <div id="branch-switcher-container" style="display:flex; align-items:center; gap:0.5rem; border-right: 1px solid #e5e7eb; padding-right: 1rem;">
+                <i class="fa-solid fa-code-branch" style="color: #6b7280;"></i>
+                <div id="branch-static" style="display:none; color: #6b7280; font-size: 0.875rem; font-weight:500;">
+                    Loading...
+                </div>
+                <select id="branch-select" class="form-control" style="display:none; width: auto; padding: 0.25rem 2rem 0.25rem 0.5rem; font-weight:500; font-size:0.875rem;" onchange="switchBranch(this.value)">
+                </select>
+            </div>
+            <div class="user-profile">
+                <i class="fa-solid fa-user-circle fa-lg"></i>
+                <span id="user-display">Loading...</span>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div id="non-admin-panel">
+            <header class="page-header">
+                <h1 class="page-title">Dashboard</h1>
+            </header>
+            <div class="dashboard-content" style="padding:2rem; text-align:center; color:#6b7280;">
+                <i class="fa-solid fa-chart-line fa-3x" style="margin-bottom:1rem; color:#d1d5db;"></i>
+                <p>Welcome to Al-Quds Center.</p>
+            </div>
+        </div>
+
+        <div id="admin-panel">
+            <header class="page-header">
+                <div>
+                    <h1 class="page-title">Staff Management</h1>
+                    <p style="color:#6b7280; font-size:0.875rem; margin-top:0.25rem;">Manage employee roles and permissions.</p>
+                </div>
+                <button class="btn-primary" onclick="openStaffModal()">
+                    <i class="fa-solid fa-plus"></i> Add Staff
+                </button>
+            </header>
+
+            <div class="dashboard-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Reg No.</th>
+                            <th>Branch</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-table-body">
+                        <!-- Rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Stock Transfers Panel -->
+        <div id="transfers-panel" style="display:none; margin-top:2rem;">
+            <header class="page-header">
+                <div>
+                    <h1 class="page-title">Stock Transfers / تحويلات المخزون</h1>
+                    <p style="color:#6b7280; font-size:0.875rem; margin-top:0.25rem;">Manage inter-branch stock movements.</p>
+                </div>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn-outline" onclick="openAuditLogModal()"><i class="fa-solid fa-clock-rotate-left"></i> Audit Log</button>
+                    <button class="btn-primary" onclick="openTransferModal()"><i class="fa-solid fa-truck"></i> New Transfer</button>
+                </div>
+            </header>
+            <div class="dashboard-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transfers-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Transfer Modal -->
+    <div class="modal" id="transfer-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin:0; font-size:1.125rem;">New Stock Transfer / تحويل جديد</h2>
+                <button class="btn-icon" onclick="closeTransferModal()"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Destination Branch / الفرع المستلم</label>
+                    <select id="transfer-dest" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>Notes / ملاحظات</label>
+                    <input type="text" id="transfer-notes" class="form-control" placeholder="Optional notes...">
+                </div>
+                <hr>
+                <h4 style="margin-bottom:0.5rem;">Items / الأصناف</h4>
+                <div id="transfer-items-list"></div>
+                <button class="btn-outline" style="margin-top:0.5rem;" onclick="addTransferItemRow()"><i class="fa-solid fa-plus"></i> Add Item</button>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeTransferModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitTransfer()">Create Transfer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Log Modal -->
+    <div class="modal" id="audit-log-modal">
+        <div class="modal-content" style="max-width:800px;">
+            <div class="modal-header">
+                <h2 style="margin:0; font-size:1.125rem;">Stock Movement Log / سجل الحركات</h2>
+                <button class="btn-icon" onclick="closeAuditLogModal()"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <div class="modal-body" style="max-height:60vh; overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr><th>Date</th><th>Staff</th><th>Action</th><th>Item</th><th>Qty</th></tr>
+                    </thead>
+                    <tbody id="audit-log-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Modal -->
+    <div class="modal" id="staff-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin:0; font-size:1.125rem;" id="modal-title">Add Staff</h2>
+                <button class="btn-icon" onclick="closeStaffModal()"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="staff-form">
+                    <input type="hidden" id="staff-id">
+                    
+                    <div style="display:flex; gap:1rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Full Name / الاسم الكامل</label>
+                            <input type="text" id="staff-name" class="form-control" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Registration Number / رقم التسجيل</label>
+                            <input type="text" id="staff-reg" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:1rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Password / كلمة المرور <small>(Leave blank on edit to keep)</small></label>
+                            <input type="password" id="staff-password" class="form-control">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Role / الدور الوظيفي</label>
+                            <select id="staff-role" class="form-control" required>
+                                <option value="ADMIN">الأدمن / مدير النظام</option>
+                                <option value="BRANCH_MANAGER">مدير الفرع</option>
+                                <option value="DEPUTY_MANAGER">نائب المدير</option>
+                                <option value="ASSISTANT_MANAGER">مساعد مدير</option>
+                                <option value="ASSISTANT_DEPUTY_ASSISTANT_MANAGER">مساعد نائب مساعد المدير</option>
+                                <option value="WAREHOUSE_MANAGER">مدير المخازن</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:1rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Branch Assignment / الفرع</label>
+                            <select id="staff-branch" class="form-control" required></select>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Status / الحالة</label>
+                            <select id="staff-status" class="form-control" required>
+                                <option value="active">Active</option>
+                                <option value="leave">On Leave / Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="permissions-section" id="permissions-container">
+                        <h3 style="font-size:1rem; margin-top:0;">Permissions Checkboxes / الصلاحيات المتاحة</h3>
+                        <div id="permissions-list"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeStaffModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveStaff()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let branchesList = [];
+        let permissionsList = [];
+        let staffData = [];
+
+        async function switchBranch(branch_id) {
+            try {
+                const res = await fetch('/api/auth/switch-branch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ branch_id })
+                });
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to switch branch.');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function initDashboard() {
+            try {
+                const res = await fetch('/api/auth/check');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.authenticated) {
+                        currentUser = data;
+
+                        // ── STRICT ADMIN CHECK: non-admins must not access dashboard ──
+                        const isAdmin = (currentUser.role === 'ADMIN' || currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+                        if (!isAdmin) {
+                            window.location.href = '/index.html';
+                            return;
+                        }
+
+                        document.getElementById('user-display').textContent = `Reg No: ${data.registration_number} (${data.role})`;
+                        
+                        document.getElementById('admin-panel').style.display = 'block';
+                        document.getElementById('non-admin-panel').style.display = 'none';
+                        document.getElementById('branch-select').style.display = 'block';
+                        document.getElementById('transfers-panel').style.display = 'block';
+                        loadAdminData();
+                        loadTransfers();
+                    } else {
+                        window.location.href = '/login.html';
+                    }
+                } else {
+                    window.location.href = '/login.html';
+                }
+            } catch (err) {
+                console.error('Session check failed', err);
+            }
+        }
+
+        async function loadAdminData() {
+            try {
+                // Load Branches
+                const resBranches = await fetch('/api/admin/branches');
+                if (resBranches.ok) {
+                    const data = await resBranches.json();
+                    branchesList = Array.isArray(data) ? data : (data.branches || []);
+                    
+                    const bHeaderSelect = document.getElementById('branch-select');
+                    bHeaderSelect.innerHTML = '';
+                    
+                    branchesList.forEach(b => {
+                        bHeaderSelect.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+                    });
+                    
+                    bHeaderSelect.value = currentUser.active_branch_id;
+                }
+
+                // Load Permissions
+                const resPerms = await fetch('/api/admin/permissions');
+                if (resPerms.ok) {
+                    const data = await resPerms.json();
+                    permissionsList = data.permissions;
+                    renderPermissionsCheckboxes();
+                }
+
+                // Load Staff
+                fetchStaffList();
+
+            } catch (err) {
+                console.error('Failed loading admin data', err);
+            }
+        }
+
+        async function fetchStaffList() {
+            const res = await fetch('/api/admin/staff');
+            if (res.ok) {
+                const data = await res.json();
+                staffData = data.staff;
+                const tbody = document.getElementById('staff-table-body');
+                tbody.innerHTML = '';
+
+                const roleNames = {
+                    'ADMIN': 'مدير النظام (Admin)',
+                    'BRANCH_MANAGER': 'مدير الفرع',
+                    'DEPUTY_MANAGER': 'نائب المدير',
+                    'ASSISTANT_MANAGER': 'مساعد مدير',
+                    'ASSISTANT_DEPUTY_ASSISTANT_MANAGER': 'مساعد نائب مساعد المدير',
+                    'WAREHOUSE_MANAGER': 'مدير المخازن'
+                };
+
+                staffData.forEach(s => {
+                    const badgeClass = s.status === 'active' ? 'badge-active' : 'badge-disabled';
+                    const displayRole = roleNames[s.role] || s.role;
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${s.name}</td>
+                            <td>${s.registration_number}</td>
+                            <td>${s.branch_name || 'N/A'}</td>
+                            <td>${displayRole}</td>
+                            <td><span class="badge ${badgeClass}">${s.status}</span></td>
+                            <td>
+                                <button class="btn-icon" onclick='editStaff(${JSON.stringify(s).replace(/'/g, "&apos;")})'>
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function renderPermissionsCheckboxes() {
+            const container = document.getElementById('permissions-list');
+            container.innerHTML = '';
+            
+            // Group by category
+            const grouped = {};
+            permissionsList.forEach(p => {
+                if(!grouped[p.category]) grouped[p.category] = [];
+                grouped[p.category].push(p);
+            });
+
+            for (const cat in grouped) {
+                let html = `<div class="permission-category">
+                                <h4>${cat}</h4>
+                                <div class="permission-grid">`;
+                grouped[cat].forEach(p => {
+                    html += `<label class="permission-item">
+                                <input type="checkbox" name="permissions" value="${p.key}">
+                                ${p.description}
+                             </label>`;
+                });
+                html += `</div></div>`;
+                container.innerHTML += html;
+            }
+        }
+
+        async function loadBranchesDropdown() {
+            try {
+                const res = await fetch('/api/admin/branches');
+                const data = await res.json();
+                console.log('Fetched Branches:', data); // Debug log
+
+                // Handle both array responses or object wrapped responses { branches: [...] }
+                const branches = Array.isArray(data) ? data : (data.branches || []);
+                
+                // My ID in the form is staff-branch
+                const selectEl = document.getElementById('staff-branch') || document.querySelector('select[name="branch_id"]');
+                if (!selectEl) {
+                    console.error('Branch select element not found in DOM!');
+                    return;
+                }
+
+                selectEl.innerHTML = '<option value="">اختر الفرع / Select Branch</option>';
+                branches.forEach(branch => {
+                    const opt = document.createElement('option');
+                    opt.value = branch.id;
+                    opt.textContent = branch.name || branch.branch_name;
+                    selectEl.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Error loading branches:', err);
+            }
+        }
+
+        async function openStaffModal() {
+            document.getElementById('staff-form').reset();
+            document.getElementById('staff-id').value = '';
+            await loadBranchesDropdown();
+            document.getElementById('modal-title').innerText = 'Add Staff';
+            document.getElementById('staff-password').required = true;
+            document.getElementById('staff-modal').classList.add('active');
+        }
+
+        function closeStaffModal() {
+            document.getElementById('staff-modal').classList.remove('active');
+        }
+
+        async function editStaff(staff) {
+            document.getElementById('staff-form').reset();
+            await loadBranchesDropdown();
+            document.getElementById('staff-id').value = staff.id;
+            document.getElementById('staff-name').value = staff.name;
+            document.getElementById('staff-reg').value = staff.registration_number;
+            document.getElementById('staff-role').value = staff.role;
+            if(staff.branch_id) document.getElementById('staff-branch').value = staff.branch_id;
+            document.getElementById('staff-status').value = staff.status || 'active';
+            document.getElementById('staff-password').required = false;
+
+            // check permissions
+            const checkboxes = document.querySelectorAll('input[name="permissions"]');
+            checkboxes.forEach(cb => {
+                cb.checked = staff.permissions.includes(cb.value);
+            });
+
+            document.getElementById('modal-title').innerText = 'Edit Staff';
+            document.getElementById('staff-modal').classList.add('active');
+        }
+
+        async function saveStaff() {
+            const id = document.getElementById('staff-id').value;
+            const payload = {
+                name: document.getElementById('staff-name').value,
+                registration_number: document.getElementById('staff-reg').value,
+                password: document.getElementById('staff-password').value,
+                role: document.getElementById('staff-role').value,
+                branch_id: document.getElementById('staff-branch').value,
+                status: document.getElementById('staff-status').value,
+                permissions: Array.from(document.querySelectorAll('input[name="permissions"]:checked')).map(cb => cb.value)
+            };
+
+            if(!payload.name || !payload.registration_number || (!id && !payload.password)) {
+                alert('Please fill all required fields.');
+                return;
+            }
+
+            const url = id ? `/api/admin/staff/${id}` : `/api/admin/staff`;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if(res.ok && data.success) {
+                    closeStaffModal();
+                    fetchStaffList();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('An error occurred.');
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/login.html';
+            } catch (err) {
+                console.error('Logout failed', err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBranchesDropdown();
+        });
+
+        // ===== STOCK TRANSFERS JS =====
+        let inventoryItems = [];
+
+        async function loadTransfers() {
+            try {
+                const res = await fetch('/api/transfers');
+                if (!res.ok) return;
+                const data = await res.json();
+                const tbody = document.getElementById('transfers-table-body');
+                tbody.innerHTML = '';
+                (data.transfers || []).forEach(t => {
+                    const statusColors = { PENDING: '#fef3c7;color:#92400e', IN_TRANSIT: '#dbeafe;color:#1e40af', COMPLETED: '#dcfce7;color:#166534', CANCELLED: '#f3f4f6;color:#4b5563' };
+                    const bgStyle = statusColors[t.status] || '';
+                    const dateStr = new Date(t.created_at).toLocaleDateString('en-GB');
+
+                    let actions = '';
+                    if (t.status === 'PENDING' && (currentUser.role === 'ADMIN' || currentUser.active_branch_id === t.source_branch_id)) {
+                        actions += '<button class="btn-outline" style="font-size:0.75rem;padding:0.25rem 0.5rem;" onclick="changeTransferStatus(' + t.id + ', \'IN_TRANSIT\')">شحن / Ship</button> ';
+                    }
+                    if (t.status === 'IN_TRANSIT' && (currentUser.role === 'ADMIN' || currentUser.active_branch_id === t.destination_branch_id)) {
+                        actions += '<button class="btn-primary" style="font-size:0.75rem;padding:0.25rem 0.5rem;" onclick="changeTransferStatus(' + t.id + ', \'COMPLETED\')">تأكيد / Receive</button> ';
+                    }
+                    if (t.status !== 'COMPLETED' && t.status !== 'CANCELLED' && (currentUser.role === 'ADMIN' || currentUser.active_branch_id === t.source_branch_id)) {
+                        actions += '<button class="btn-icon" style="color:#ef4444;" onclick="changeTransferStatus(' + t.id + ', \'CANCELLED\')"><i class="fa-solid fa-ban"></i></button>';
+                    }
+
+                    tbody.innerHTML += '<tr>' +
+                        '<td>' + t.transfer_code + '</td>' +
+                        '<td>' + t.source_name + '</td>' +
+                        '<td>' + t.dest_name + '</td>' +
+                        '<td>' + dateStr + '</td>' +
+                        '<td><span class="badge" style="background:' + bgStyle + '">' + t.status + '</span></td>' +
+                        '<td>' + actions + '</td>' +
+                        '</tr>';
+                });
+            } catch (err) {
+                console.error('Failed to load transfers', err);
+            }
+        }
+
+        async function changeTransferStatus(id, status) {
+            if (!confirm('Are you sure? / هل أنت متأكد?')) return;
+            try {
+                const res = await fetch('/api/transfers/' + id + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    loadTransfers();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown'));
+                }
+            } catch (e) { console.error(e); alert('Error updating transfer.'); }
+        }
+
+        async function openTransferModal() {
+            document.getElementById('transfer-notes').value = '';
+            document.getElementById('transfer-items-list').innerHTML = '';
+            // Populate destination dropdown (branches minus current)
+            const destSel = document.getElementById('transfer-dest');
+            destSel.innerHTML = '';
+            branchesList.forEach(b => {
+                if (b.id !== currentUser.active_branch_id) {
+                    destSel.innerHTML += '<option value="' + b.id + '">' + b.name + '</option>';
+                }
+            });
+            // Load inventory for current branch
+            try {
+                const res = await fetch('/api/inventory');
+                if (res.ok) {
+                    inventoryItems = await res.json();
+                }
+            } catch(e) { console.error(e); }
+
+            addTransferItemRow();
+            document.getElementById('transfer-modal').classList.add('active');
+        }
+
+        function closeTransferModal() {
+            document.getElementById('transfer-modal').classList.remove('active');
+        }
+
+        function addTransferItemRow() {
+            const container = document.getElementById('transfer-items-list');
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;';
+
+            let batchOptions = '<option value="">Select Batch</option>';
+            inventoryItems.forEach(inv => {
+                if (inv.qty > 0) {
+                    batchOptions += '<option value="' + inv.inventory_id + '" data-item-id="' + inv.product_id + '">' + inv.item_name + ' | ' + (inv.batch_number || 'N/A') + ' (stock: ' + inv.qty + ')</option>';
+                }
+            });
+
+            row.innerHTML = '<select class="form-control transfer-batch" style="flex:3;">' + batchOptions + '</select>' +
+                '<input type="number" class="form-control transfer-qty" min="1" placeholder="Qty" style="flex:1;">' +
+                '<button class="btn-icon" style="color:#ef4444;" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i></button>';
+            container.appendChild(row);
+        }
+
+        async function submitTransfer() {
+            const dest = document.getElementById('transfer-dest').value;
+            const notes = document.getElementById('transfer-notes').value;
+            const rows = document.querySelectorAll('#transfer-items-list > div');
+            const items = [];
+
+            rows.forEach(row => {
+                const sel = row.querySelector('.transfer-batch');
+                const qty = row.querySelector('.transfer-qty');
+                if (sel.value && qty.value) {
+                    const opt = sel.options[sel.selectedIndex];
+                    items.push({
+                        batch_id: parseInt(sel.value),
+                        item_id: parseInt(opt.dataset.itemId),
+                        quantity: parseInt(qty.value)
+                    });
+                }
+            });
+
+            if (!dest || !items.length) {
+                alert('Select destination and at least one item.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/transfers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destination_branch_id: parseInt(dest), items, notes })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    closeTransferModal();
+                    loadTransfers();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown'));
+                }
+            } catch (e) { console.error(e); alert('Error creating transfer.'); }
+        }
+
+        async function openAuditLogModal() {
+            try {
+                const res = await fetch('/api/transfers/audit-logs');
+                if (!res.ok) return;
+                const data = await res.json();
+                const tbody = document.getElementById('audit-log-body');
+                tbody.innerHTML = '';
+                (data.logs || []).forEach(l => {
+                    const dateStr = new Date(l.created_at).toLocaleString('en-GB');
+                    tbody.innerHTML += '<tr>' +
+                        '<td style="font-size:0.8rem;">' + dateStr + '</td>' +
+                        '<td>' + (l.staff_name || '-') + '</td>' +
+                        '<td><span class="badge badge-active">' + l.action_type + '</span></td>' +
+                        '<td>' + (l.item_name || '-') + '</td>' +
+                        '<td>' + l.quantity_changed + '</td>' +
+                        '</tr>';
+                });
+                document.getElementById('audit-log-modal').classList.add('active');
+            } catch (e) { console.error(e); }
+        }
+
+        function closeAuditLogModal() {
+            document.getElementById('audit-log-modal').classList.remove('active');
+        }
+        // ===== END STOCK TRANSFERS JS =====
+
+        initDashboard();
+    </script>
+</body>
+</html>
