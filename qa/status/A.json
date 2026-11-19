@@ -1,0 +1,158 @@
+{
+  "worker": "A",
+  "branch": "qa/A",
+  "domain": "Authentication, RBAC, branch isolation, staff & client directories",
+  "tests": {
+    "files": 5,
+    "cases": 85,
+    "passing": 85,
+    "known_bugs": 7
+  },
+  "routes": [
+    { "method": "GET", "path": "/api/auth/check", "covered": true, "note": "anon 401; live permission revoke via DB" },
+    { "method": "POST", "path": "/api/auth/login", "covered": true, "note": "cookie 64-hex/HttpOnly/24h+7d; 400/401; inactive user A-BUG-5" },
+    { "method": "POST", "path": "/api/auth/logout", "covered": true, "note": "session invalidated; second logout safe" },
+    { "method": "GET", "path": "/api/auth/me", "covered": true, "note": "mirrors /check" },
+    { "method": "POST", "path": "/api/auth/refresh-permissions", "covered": true, "note": "live DB revoke reflected; anon 401" },
+    { "method": "POST", "path": "/api/auth/switch-branch", "covered": true, "note": "employee 403; branch-2 scope change; malformed id A-BUG-6" },
+    { "method": "GET", "path": "/api/admin/branches", "covered": true, "note": "403 emp; 200 admin + superadmin" },
+    { "method": "GET", "path": "/api/admin/permissions", "covered": true, "note": "403 emp; 200 admin + superadmin" },
+    { "method": "GET", "path": "/api/admin/staff", "covered": true, "note": "403 emp; 200 admin + superadmin; joined shape" },
+    { "method": "POST", "path": "/api/admin/staff", "covered": true, "note": "400 validation/duplicate; 201-style side effect; bcrypt hash" },
+    { "method": "PUT", "path": "/api/admin/staff/:id", "covered": true, "note": "DB row + permissions replaced; invalid role 400" },
+    { "method": "GET", "path": "/api/staff", "covered": true, "note": "shape OK; cross-branch leak A-BUG-2" },
+    { "method": "POST", "path": "/api/staff", "covered": true, "note": "DB side effect; missing fields 400; no admin gate A-BUG-1" },
+    { "method": "DELETE", "path": "/api/staff/:id", "covered": true, "note": "admin delete verified; no admin gate A-BUG-1" },
+    { "method": "GET", "path": "/api/staff/:id", "covered": true, "note": "in-scope 200; unknown 404; branch-2 leak A-BUG-2" },
+    { "method": "PUT", "path": "/api/staff/:id", "covered": true, "note": "admin update verified; cross-branch mutation A-BUG-1" },
+    { "method": "GET", "path": "/api/staff/stats", "covered": true, "note": "global counts instead of branch scope A-BUG-3" },
+    { "method": "GET", "path": "/api/clients/:id/summary", "covered": true, "note": "doc-/pharm- prefixes; 400/404; branch + admin branch target" },
+    { "method": "GET", "path": "/api/customers/debt", "covered": true, "note": "403 emp; 200 collector; branch-scoped ledger" },
+    { "method": "GET", "path": "/api/customers/debts", "covered": true, "note": "403 emp; 200 collector; alias parity" },
+    { "method": "GET", "path": "/api/doctors", "covered": true, "note": "branch scope; query/header overrides ignored for non-admin" },
+    { "method": "POST", "path": "/api/doctors", "covered": true, "note": "403 emp; 400 missing fields; 201 + DB row + default credit limit" },
+    { "method": "DELETE", "path": "/api/doctors/:id", "covered": true, "note": "round-trip; branch-2 protected" },
+    { "method": "GET", "path": "/api/doctors/:id", "covered": true, "note": "200 in-scope; 404 branch-2/unknown" },
+    { "method": "PUT", "path": "/api/doctors/:id", "covered": true, "note": "DB round-trip; branch-2 404" },
+    { "method": "GET", "path": "/api/doctors/:id/orders", "covered": true, "note": "200 with seeded order; missing existence check A-BUG-4" },
+    { "method": "GET", "path": "/api/doctors/:id/transactions", "covered": true, "note": "profile shape; branch-2 and unknown 404" },
+    { "method": "GET", "path": "/api/pharmacies", "covered": true, "note": "branch scope; query/header overrides ignored for non-admin" },
+    { "method": "POST", "path": "/api/pharmacies", "covered": true, "note": "403 emp; 400 missing fields; 201 + DB row branch 1" },
+    { "method": "DELETE", "path": "/api/pharmacies/:id", "covered": true, "note": "round-trip; silent no-op 200 on branch-2 A-BUG-7" },
+    { "method": "GET", "path": "/api/pharmacies/:id", "covered": true, "note": "200 in-scope; 404 branch-2/unknown" },
+    { "method": "PUT", "path": "/api/pharmacies/:id", "covered": true, "note": "DB round-trip; silent no-op 200 on branch-2 A-BUG-7" }
+  ],
+  "bugs": [
+    {
+      "id": "A-BUG-1",
+      "title": "Staff write routes have no Admin Only permission gate",
+      "severity": "critical",
+      "route": "POST /api/staff, PUT /api/staff/:id, DELETE /api/staff/:id",
+      "spec": "readme.md:728-730 (Admin Only); Golden Rule 1 readme.md:1003",
+      "expected": "EMPLOYEE receives 403; a branch-1 user targeting branch-2 staff receives 404",
+      "actual": "emp1 POST /api/staff -> 201 {success:true,id:21}; PUT /api/staff/12 -> 200 {success:true}; DELETE /api/staff/12 -> 200 {success:true} and branch-2 row 12 is hard-deleted",
+      "repro": "const emp=await loginAs('emp1'); await emp.post('/api/staff').send({name:'X',role:'EMPLOYEE'}); await emp.put('/api/staff/12').send({name:'Hijacked',role:'ADMIN'}); await emp.delete('/api/staff/12');",
+      "test": "tests/integration/auth/staff.test.js:90",
+      "status": "open"
+    },
+    {
+      "id": "A-BUG-2",
+      "title": "Staff directory reads ignore branch scope",
+      "severity": "high",
+      "route": "GET /api/staff, GET /api/staff/:id",
+      "spec": "readme.md:725,727 (Auth + Scope); Golden Rule 1 readme.md:1003",
+      "expected": "branch-1 employee sees only branch-1 staff; GET /api/staff/12 -> 404; ?branch_id=2 and x-branch-id:2 ignored",
+      "actual": "emp1 GET /api/staff -> all 20 staff including 'Branch Two Manager' (id 12); GET /api/staff/12 -> 200 with the branch-2 record; spoofed query/header still returns all rows",
+      "repro": "const emp=await loginAs('emp1'); await emp.get('/api/staff'); await emp.get('/api/staff/12'); await emp.get('/api/staff?branch_id=2').set('x-branch-id','2');",
+      "test": "tests/integration/auth/staff.test.js:35",
+      "status": "open"
+    },
+    {
+      "id": "A-BUG-3",
+      "title": "GET /api/staff/stats reports global counts instead of caller branch",
+      "severity": "medium",
+      "route": "GET /api/staff/stats",
+      "spec": "readme.md:726 (Auth + Scope)",
+      "expected": "for emp1 (branch 1): total=13, active=13, on_leave=0",
+      "actual": "{total:'20',active:'20',on_leave:'0'} — counts every staff row in the database",
+      "repro": "const emp=await loginAs('emp1'); await emp.get('/api/staff/stats'); compare with SELECT COUNT(*) FROM staff WHERE branch_id=1.",
+      "test": "tests/integration/auth/staff.test.js:72",
+      "status": "open"
+    },
+    {
+      "id": "A-BUG-4",
+      "title": "Doctor orders endpoint has no doctor existence or branch check",
+      "severity": "medium",
+      "route": "GET /api/doctors/:id/orders",
+      "spec": "readme.md:699 (Auth + Scope); worker brief must-test behavior",
+      "expected": "branch-1 user requesting doctor 4 (branch 2) or id 9999 receives 404",
+      "actual": "both GET /api/doctors/4/orders and GET /api/doctors/9999/orders return 200 []",
+      "repro": "const emp=await loginAs('emp1'); await emp.get('/api/doctors/4/orders'); await emp.get('/api/doctors/9999/orders');",
+      "test": "tests/integration/auth/doctors-pharmacies.test.js:101",
+      "status": "open"
+    },
+    {
+      "id": "A-BUG-5",
+      "title": "Login accepts inactive (status != active) staff",
+      "severity": "high",
+      "route": "POST /api/auth/login",
+      "spec": "worker brief must-test: inactive/status != active user rejected",
+      "expected": "401 for a staff row with status='leave'",
+      "actual": "200 {success:true,role:'EMPLOYEE',redirect:'/index.html'} plus a valid session; login never inspects staff.status",
+      "repro": "UPDATE staff SET status='leave' WHERE registration_number='emp1'; POST /api/auth/login {registration_number:'emp1',password:'Passw0rd!'};",
+      "test": "tests/integration/auth/auth.test.js:72",
+      "status": "open"
+    },
+    {
+      "id": "A-BUG-6",
+      "title": "Malformed switch-branch id escapes as a 500",
+      "severity": "medium",
+      "route": "POST /api/auth/switch-branch",
+      "spec": "worker brief must-test: invalid/missing input -> 400 (not 500)",
+      "expected": "400 for branch_id='abc'",
+      "actual": "500 {error:'Internal server error.'}; server log: PostgreSQL 22P02 invalid input syntax for type integer: \"abc\"",
+      "repro": "const admin=await loginAs('admin'); await admin.post('/api/auth/switch-branch').send({branch_id:'abc'});",
+      "test": "tests/integration/auth/auth.test.js:197",
+      "status": "open"
+    },
+    {
+      "id": "A-BUG-7",
+      "title": "Pharmacy PUT/DELETE return 200 for out-of-scope branch-2 rows (silent no-op)",
+      "severity": "high",
+      "route": "PUT /api/pharmacies/:id, DELETE /api/pharmacies/:id",
+      "spec": "readme.md:706-707 (Auth + Scope); worker brief: branch-1 user updating/deleting branch-2 row -> 404",
+      "expected": "404 for a branch-1 CRM user targeting pharmacy 4",
+      "actual": "200 {success:true} although zero rows matched id=4 AND branch_id=1; the branch-2 row is untouched but the caller is misled",
+      "repro": "const crm=await loginAs('crm1'); await crm.put('/api/pharmacies/4').send({name:'Hijack',area:'Cairo'}); await crm.delete('/api/pharmacies/4');",
+      "test": "tests/integration/auth/doctors-pharmacies.test.js:265",
+      "status": "open"
+    }
+  ],
+  "questions": [
+    {
+      "topic": "switch-branch unknown branch id status",
+      "detail": "readme.md:599 lists the route and payload but does not pin the error status. The worker brief says invalid branch id -> 400; the implementation returns 404 {error:'Branch not found.'} for an unknown numeric id. The suite asserts [400,404] for that case and records the malformed-id 500 as A-BUG-6. Please confirm the intended contract."
+    },
+    {
+      "topic": "Hard deletion of doctors/pharmacies with ledger history",
+      "detail": "readme.md:702/707 says 'Deletes doctor/pharmacy record' without specifying soft delete or ledger handling. DELETE succeeds (200) and FKs SET NULL on client_transactions/orders, leaving ledger rows with NULL client_id/pharmacy_id. No failing test was added because the spec is ambiguous; product decision needed."
+    },
+    {
+      "topic": "Directory-only staff created through POST /api/staff have no credentials",
+      "detail": "The documented payload (readme.md:728) contains no registration_number/password; both columns are nullable in this schema, so the row is created with NULLs and can never log in. The suite documents this behavior in a passing test. Confirm whether credential creation belongs only to POST /api/admin/staff."
+    },
+    {
+      "topic": "Brief's suspected orders.created_by defect not reproducible",
+      "detail": "getDoctorOrders selects o.branch_id (not created_by); branch_id is added by migrate_missing_branch_columns.js which the harness applies. GET /api/doctors/1/orders returns 200 with order rows. The separate missing-existence-check problem is A-BUG-4."
+    },
+    {
+      "topic": "Assigned route count in the brief",
+      "detail": "The brief header says '31' routes but its own lists enumerate 32 (6 auth + 5 admin + 6 staff + 3 clients/debt + 7 doctors + 5 pharmacies). All 32 enumerated routes are in the route table above and each is exercised; no route was added or omitted."
+    }
+  ],
+  "gaps": [
+    "No shared test-helper gaps: resetDatabase(), loginAs()/loginAsRole(), anon() and clearSessions() were sufficient; no local helper was needed.",
+    "No assigned route was impossible to exercise; all 32 enumerated routes reach their handlers."
+  ],
+  "notes": "Final run: npx jest --runInBand tests/integration/auth -> 5 suites passed, 85 tests passed (73 ordinary + 12 test.failing regressions covering 7 distinct bugs), 0 skipped. No production code, shared harness, .env or .env.test was read or modified. node_modules is an untracked symlink and is excluded from the commit."
+}
