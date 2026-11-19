@@ -337,6 +337,47 @@ agy plugin install /home/ahmed/Projects/alqouds_last/.agents/plugins/alqouds-ski
 - If you update the repo skills, re-copy them into `.agents/plugins/alqouds-skills/skills/` and re-run `agy plugin install`.
 
 
+## 14. PLAYWRIGHT E2E BROWSER TEST SUITE
+
+A full browser-driven End-to-End (E2E) testing suite is implemented using Playwright (`@playwright/test` v1.65.1) running in headless Chromium.
+
+### Architecture & Isolation
+
+- **Configuration**: `playwright.config.js` at project root.
+- **Port Isolation**: Boots `app.js` on port `3100` via Playwright's `webServer` block (`DEBUG_TESTS=1 PORT=3100 node -r ./tests/setup/env.js app.js`).
+- **Database Safety (Hard Rule 1)**: Preloads `./tests/setup/env.js`, ensuring `DATABASE_URL` is read strictly from `.env.test` (`alquods_test_main` on port 5433).
+- **Deterministic Provisioning**: `globalSetup` in `tests/e2e/global-setup.js` executes `resetDatabase()` before tests, ensuring clean seeded data (`admin`, `emp1`, `pos1`, products, branches).
+
+### E2E Test Files (`tests/e2e/`)
+
+| File | Focus | Scenarios Tested |
+|---|---|---|
+| `tests/e2e/auth.spec.js` | Authentication & Access Control | Unauthenticated visitor redirected to `/login.html` with Arabic branding; invalid login error toast; Admin login redirects to `/dashboard`; Employee login redirects to `/index.html`; Employee blocked from `/dashboard` |
+| `tests/e2e/navigation.spec.js` | Operational Navigation & RTL | Inventory management (`/inventory.html`, RTL layout verification); Wholesale orders (`/orders.html`); Product catalog (`/products.html`); Transfers (`/transfer.html`); Warehouses (`/warehouse.html`) |
+| `tests/e2e/pos-retail.spec.js` | POS Retail Sales Interface | Cashier login; direct navigation to `/pos` & `/retail_sales.html`; Arabic RTL layout; Shift status indicator (`#shift-badge`, `#btn-open-shift`); Cart table & checkout button; Return navigation to dashboard |
+
+### Execution Commands
+
+```bash
+# Run all Playwright E2E browser tests
+npm run test:e2e
+# or:
+npx playwright test
+
+# Run a specific spec
+npx playwright test tests/e2e/auth.spec.js
+npx playwright test tests/e2e/navigation.spec.js
+npx playwright test tests/e2e/pos-retail.spec.js
+
+# View HTML test report
+npx playwright show-report
+```
+
+### Verification Status
+
+- 12/12 E2E browser tests passing (0 failures, 0 flaky) in ~27 seconds.
+
+
 ## 13. ANTIGRAVITY (agy) SKILLS PLUGIN
 
 The repo's Claude Code skills (`.claude/skills/`, 86) and OpenCode skills (`.opencode/skills/`, 84) have been packaged into an Antigravity plugin so the `agy` CLI can access them.
@@ -372,4 +413,45 @@ agy plugin install /home/ahmed/Projects/alqouds_last/.agents/plugins/alqouds-ski
 - Skills are registered by their SKILL.md `name` field, so Claude skills keep their original names (e.g. `a11y-ally`) and OpenCode skills keep theirs (e.g. `qe-skill-builder`).
 - The 18 skills with identical names in both sets are deduplicated; one version of each shared name is registered. Antigravity namespaces skills to prevent collisions at runtime.
 - If you update the repo skills, re-copy them into `.agents/plugins/alqouds-skills/skills/` and re-run `agy plugin install`.
+
+
+## 14. PLAYWRIGHT E2E BROWSER TEST SUITE
+
+A full browser-driven End-to-End (E2E) testing suite is implemented using Playwright (`@playwright/test` v1.65.1) running in headless Chromium.
+
+### Architecture & Isolation
+
+- **Configuration**: `playwright.config.js` at project root.
+- **Port Isolation**: Boots `app.js` on port `3100` via Playwright's `webServer` block (`DEBUG_TESTS=1 PORT=3100 node -r ./tests/setup/env.js app.js`).
+- **Database Safety (Hard Rule 1)**: Preloads `./tests/setup/env.js`, ensuring `DATABASE_URL` is read strictly from `.env.test` (`alquods_test_main` on port 5433).
+- **Deterministic Provisioning**: `globalSetup` in `tests/e2e/global-setup.js` executes `resetDatabase()` before tests, ensuring clean seeded data (`admin`, `emp1`, `pos1`, products, branches).
+
+### E2E Test Files (`tests/e2e/`)
+
+| File | Focus | Scenarios Tested |
+|---|---|---|
+| `tests/e2e/auth.spec.js` | Authentication & Access Control | Unauthenticated visitor redirected to `/login.html` with Arabic branding; invalid login error toast; Admin login redirects to `/dashboard`; Employee login redirects to `/index.html`; Employee blocked from `/dashboard` |
+| `tests/e2e/navigation.spec.js` | Operational Navigation & RTL | Inventory management (`/inventory.html`, RTL layout verification); Wholesale orders (`/orders.html`); Product catalog (`/products.html`); Transfers (`/transfer.html`); Warehouses (`/warehouse.html`) |
+| `tests/e2e/pos-retail.spec.js` | POS Retail Sales Interface | Cashier login; direct navigation to `/pos` & `/retail_sales.html`; Arabic RTL layout; Shift status indicator (`#shift-badge`, `#btn-open-shift`); Cart table & checkout button; Return navigation to dashboard |
+
+### Execution Commands
+
+```bash
+# Run all Playwright E2E browser tests
+npm run test:e2e
+# or:
+npx playwright test
+
+# Run a specific spec
+npx playwright test tests/e2e/auth.spec.js
+npx playwright test tests/e2e/navigation.spec.js
+npx playwright test tests/e2e/pos-retail.spec.js
+
+# View HTML test report
+npx playwright show-report
+```
+
+### Verification Status
+
+- 12/12 E2E browser tests passing (0 failures, 0 flaky) in ~27 seconds.
 

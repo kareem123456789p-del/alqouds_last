@@ -79,7 +79,7 @@ The following 7 core domain decisions require user selection before final implem
 - **Context**: `DELETE /api/suppliers/:id`. Currently, deleting a supplier with linked transactions fails with 400 to protect accounting history.
 - **Option 7A (Current Integrity Guard)**: Hard delete only allowed if zero transactions exist. Return `400 Bad Request` if transactions exist.
 - **Option 7B (Soft-Delete / Archiving)**: Add an `is_active BOOLEAN DEFAULT TRUE` column. When a supplier with transaction history is deleted, set `is_active = FALSE` instead of deleting, hiding them from active selection while preserving ledger integrity.
-- **User Decision**: *(Pending)*
+- **User Decision**: **Option 7B** (Soft-delete archiving with `is_active` flag, implemented and verified).
 
 ---
 
@@ -112,3 +112,37 @@ The project owner has reviewed all 7 business logic questions and selected the a
 4. **Git Checkpoint & GitHub Remote Push**:
    - Commit changes with clear, descriptive semantic commit messages.
    - Push to `origin/qa/full-coverage`.
+
+---
+
+## 5. End-to-End (E2E) Browser Testing Suite with Playwright
+
+In addition to backend API integration tests, a comprehensive browser-driven E2E test suite has been built using Playwright (`@playwright/test` v1.65.1) running headless Chromium.
+
+### Architecture & Isolation
+- **Configuration**: `playwright.config.js` boots the application web server on port `3100` (`DEBUG_TESTS=1 PORT=3100 node -r ./tests/setup/env.js app.js`).
+- **Database Safety (Hard Rule 1)**: Preloads `./tests/setup/env.js` pointing strictly to `alquods_test_main` on port 5433 via `.env.test`.
+- **Pre-Test Seeding**: `tests/e2e/global-setup.js` resets and seeds the test DB before the web server starts.
+
+### Test Coverage (`tests/e2e/`)
+1. **`auth.spec.js` (5 tests)**:
+   - Unauthenticated visitor to `/` served `/login.html` with Arabic branding and login form.
+   - Submitting invalid credentials shows error notification.
+   - Admin login redirects to `/dashboard`.
+   - Regular employee login redirects to `/index.html`.
+   - Employee attempting to access `/dashboard` is redirected away.
+2. **`navigation.spec.js` (5 tests)**:
+   - Employee loads `/inventory.html` with Arabic RTL layout (`dir="rtl"`).
+   - Employee loads `/orders.html`.
+   - Employee loads `/products.html`.
+   - Employee loads `/transfer.html`.
+   - Employee loads `/warehouse.html`.
+3. **`pos-retail.spec.js` (2 tests)**:
+   - Cashier loads `/pos` with Arabic RTL layout, header, shift status badge (`#shift-badge`), open shift button (`#btn-open-shift`), cart table, and checkout elements.
+   - Cashier navigates directly to `/retail_sales.html` and tests navigation back to dashboard.
+
+### Verification Command
+```bash
+npm run test:e2e
+# 12 passed in ~27 seconds (100% pass)
+```

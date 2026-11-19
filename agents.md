@@ -32,14 +32,17 @@
 
 ## 3. Test Suite & Verification Commands
 
-All 32 test suites (405 tests) are passing with 0 failures, 0 skipped, and 0 `test.failing`:
+All 32 Jest test suites (406 integration tests) and 3 Playwright E2E test suites (12 browser tests) are passing with 0 failures, 0 skipped:
 
 ```bash
-# Run all 32 test suites (smoke + 31 integration suites)
+# Run all 32 Jest test suites (smoke + 31 integration suites)
 npm test
 
-# Run only integration suites
+# Run only Jest integration suites
 npm run test:int
+
+# Run browser-based Playwright E2E test suites (Auth, Navigation, POS Retail)
+npm run test:e2e
 
 # Run a specific domain suite:
 npx jest tests/integration/auth         # Auth, RBAC, Staff, Clients, Doctors/Pharmacies (5 suites, 85 tests)
@@ -48,6 +51,9 @@ npx jest tests/integration/finance      # Orders, Collections, Withdrawals (6 su
 npx jest tests/integration/retail       # POS Retail, Returns, Imports, Suppliers (6 suites, 82 tests)
 npx jest tests/integration/ui           # Analytics, Dashboard, Pages, Arabic PDF (4 suites, 54 tests)
 npx jest tests/integration/invariants   # Invariants, Atomicity, Concurrency, Fast-Check (4 suites, 19 tests)
+npx playwright test tests/e2e/auth.spec.js        # Authentication & Session E2E
+npx playwright test tests/e2e/navigation.spec.js  # Operational Navigation & RTL Views
+npx playwright test tests/e2e/pos-retail.spec.js  # POS Cashier & Retail Interface
 ```
 
 ---

@@ -42,7 +42,9 @@ pipeline. `readme.md` is the spec; its 10 Golden Rules are oracles.
 | P3 merge + invariants | ✅ done | Merged A–E + Worker F completed (4 suites, 19 tests, total 31 suites, 400 tests) |
 | P4 review/mutation/AQE | ✅ done | Coverage: 83.43% lines, 64% branch, 82.22% stmts; mutation testing configured |
 | P5 reports | ✅ done | ROUTE_INVENTORY, TRACEABILITY, BUGS, QA_REPORT, 10-line summary |
-| Bug Remediations | ✅ done | All 28 production bugs (BUG-001..BUG-028) fixed across all 5 domains, 405/405 clean pass |
+| Bug Remediations | ✅ done | All 28 production bugs (BUG-001..BUG-028) fixed across all 5 domains, 406/406 clean pass |
+| User Directives 6B & 7B | ✅ done | Manager cross-branch analytics permission & Supplier soft-delete migration |
+| Playwright E2E Suite | ✅ done | 3 E2E specs, 12 browser tests passing (Auth, Navigation, POS Retail) |
 
 ## Worker Completion Ledger
 
@@ -51,10 +53,11 @@ pipeline. `readme.md` is the spec; its 10 Golden Rules are oracles.
 | **A** | `qa/A` | `alquods-qa-A` | Auth, RBAC, staff, clients, doctors/pharmacies | 5 | 85 | ✅ committed `12bb4fb` (fixed `4c50c63`) | A-BUG-1..7 (staff write perm gate, cross-branch leaks) |
 | **B** | `qa/B` | `alquods-qa-B` | Products, inventory, warehouses, transfers | 5 | 89 | ✅ committed `cdde6f9` (fixed `4b38b19`) | B-BUG-1..14 (negative transfer stock, warehouse_id 23502) |
 | **C** | `qa/C` | `alquods-qa-C` | Wholesale orders, collections, withdrawals | 6 | 65 | ✅ committed `f53a5d3` (fixed `87c2d3a`) | C-BUG-1..10 (missing clients table, created_by 500, tx leak) |
-| **D** | `qa/D` | `alquods-qa-D` | POS/retail, returns, imports, suppliers | 6 | 82 | ✅ committed `bfe6ac8` (fixed `996142c`) | D-BUG-1..13 (unvalidated returns, double quote identifier 500) |
-| **E** | `qa/E` | `alquods-qa-E` | Analytics, dashboard, pages, Arabic PDF | 4 | 54 | ✅ committed `f4a9633` (fixed `17039d1`) | E-BUG-1..7 (analytics branch override, bidi-js crash) |
+| **D** | `qa/D` | `alquods-qa-D` | POS/retail, returns, imports, suppliers | 6 | 83 | ✅ committed `bfe6ac8` (fixed `996142c`, `35619dd`) | D-BUG-1..13 (unvalidated returns, supplier soft-delete 7B) |
+| **E** | `qa/E` | `alquods-qa-E` | Analytics, dashboard, pages, Arabic PDF | 4 | 54 | ✅ committed `f4a9633` (fixed `17039d1`, `35619dd`) | E-BUG-1..7 (analytics branch override 6B, bidi-js crash) |
 | **F** | `qa/F` | `alquods-qa-F` | Invariants, atomicity, concurrency, fast-check | 4 | 19 | ✅ committed `3735e64` (fixed `17039d1`) | F-BUG-1 (double-ship race condition), GR 5/7/8/10 verified |
-| **Total** | `qa/full-coverage` | main | All domains + smoke & schema | **32** | **405** | ✅ **100% PASS** | 28/28 bugs resolved & verified |
+| **Total (Jest)** | `qa/full-coverage` | main | All domains + smoke & schema | **32** | **406** | ✅ **100% PASS** | 28/28 bugs resolved & verified |
+| **E2E (Playwright)** | `qa/full-coverage` | main | Auth, Navigation, POS Retail Flows | **3** | **12** | ✅ **100% PASS** | Real headless browser validation |
 
 ## Commits on `qa/full-coverage`
 
@@ -69,3 +72,4 @@ pipeline. `readme.md` is the spec; its 10 Golden Rules are oracles.
 - `87c2d3a` fix(qa): fix order branch scoping, client union, debt calculations, and withdrawal validations (C-BUG-1..10)
 - `996142c` fix(qa): fix retail returns, shift scoping, import returns, and supplier transactions (D-BUG-1..13)
 - `17039d1` fix(qa): fix analytics branch scoping, dashboard stats, dashboard page gate, and Arabic PDF shaping (E-BUG-1..7, F-BUG-1)
+- `35619dd` fix(qa): implement user decisions 6B and 7B for cross-branch analytics and supplier soft-delete
