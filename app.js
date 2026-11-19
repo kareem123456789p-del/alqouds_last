@@ -161,7 +161,11 @@ app.get('/dashboard', requireAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Start Server
-app.listen(port, () => {
-    console.log(`✅ Server is running on http://localhost:${port}`);
-});
+// Start Server (only when executed directly; tests import `app` instead)
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`✅ Server is running on http://localhost:${port}`);
+    });
+}
+
+module.exports = app;
