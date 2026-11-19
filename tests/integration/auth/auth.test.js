@@ -69,7 +69,7 @@ describe('POST /api/auth/login', () => {
     expect(noPassword.status).toBe(400);
   });
 
-  test.failing('a staff member whose status is not active cannot log in @known-bug A-BUG-5', async () => {
+  test('a staff member whose status is not active cannot log in @known-bug A-BUG-5', async () => {
     // readme.md §Authentication + worker brief: inactive users must be rejected.
     await q("UPDATE staff SET status = 'leave' WHERE registration_number = 'emp1'");
     const res = await anon().post('/api/auth/login')
@@ -194,7 +194,7 @@ describe('POST /api/auth/switch-branch', () => {
     expect((await admin.get('/api/auth/check')).body.active_branch_id).toBe(1);
   });
 
-  test.failing('a malformed branch_id returns 400, not a 500 @known-bug A-BUG-6', async () => {
+  test('a malformed branch_id returns 400, not a 500 @known-bug A-BUG-6', async () => {
     const admin = await loginAs('admin');
     const res = await admin.post('/api/auth/switch-branch').send({ branch_id: 'abc' });
     // actual: 500 — Postgres 22P02 from `WHERE id = 'abc'` escapes the handler.

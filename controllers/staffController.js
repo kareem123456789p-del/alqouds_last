@@ -1,12 +1,21 @@
 const pool = require('../db');
 
+function isUserAdmin(req) {
+    const role = (req.user?.role || '').toUpperCase();
+    return role === 'ADMIN' || role === 'SUPER ADMIN';
+}
+
 /**
  * GET /api/staff
  */
 const getStaff = async (req, res, next) => {
     try {
+        const isAdmin = isUserAdmin(req);
         const [rows] = await pool.execute(
-            'SELECT id, name, role, phone, email, status, base_salary FROM staff ORDER BY name ASC'
+            isAdmin
+                ? 'SELECT id, name, role, phone, email, status, base_salary, branch_id FROM staff ORDER BY name ASC'
+                : 'SELECT id, name, role, phone, email, status, base_salary, branch_id FROM staff WHERE branch_id = ? ORDER BY name ASC',
+            isAdmin ? [] : [req.branchId]
         );
         res.json(rows);
     } catch (err) { next(err); }
@@ -17,9 +26,12 @@ const getStaff = async (req, res, next) => {
  */
 const getStaffById = async (req, res, next) => {
     try {
+        const isAdmin = isUserAdmin(req);
         const [[member]] = await pool.execute(
-            'SELECT id, name, role, phone, email, status, base_salary FROM staff WHERE id = ?',
-            [req.params.id]
+            isAdmin
+                ? 'SELECT id, name, role, phone, email, status, base_salary, branch_id FROM staff WHERE id = ?'
+                : 'SELECT id, name, role, phone, email, status, base_salary, branch_id FROM staff WHERE id = ? AND branch_id = ?',
+            isAdmin ? [req.params.id] : [req.params.id, req.branchId]
         );
         if (!member) return res.status(404).json({ error: 'Staff member not found' });
         res.json(member);
@@ -31,12 +43,16 @@ const getStaffById = async (req, res, next) => {
  */
 const createStaff = async (req, res, next) => {
     try {
-        const { name, role, phone, email, status, base_salary } = req.body;
+        if (!isUserAdmin(req)) {
+            return res.status(403).json({ error: 'Admin permission required to create staff' });
+        }
+        const { name, role, phone, email, status, base_salary, branch_id } = req.body;
         if (!name || !role) return res.status(400).json({ error: 'Name and role are required' });
 
+        const targetBranchId = branch_id || req.branchId || 1;
         const [result] = await pool.execute(
-            `INSERT INTO staff (name, role, phone, email, status, base_salary) VALUES (?, ?, ?, ?, ?, ?)`,
-            [name, role, phone || null, email || null, status || 'active', base_salary || 0.00]
+            `INSERT INTO staff (name, role, phone, email, status, base_salary, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [name, role, phone || null, email || null, status || 'active', base_salary || 0.00, targetBranchId]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (err) { next(err); }
@@ -47,6 +63,12 @@ const createStaff = async (req, res, next) => {
  */
 const updateStaff = async (req, res, next) => {
     try {
+        const isAdmin = isUserAdmin(req);
+        if (!isAdmin) {
+            const [[existing]] = await pool.execute('SELECT id FROM staff WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]);
+            if (!existing) return res.status(404).json({ error: 'Staff member not found in your branch' });
+        }
+
         const { name, role, phone, email, status, base_salary } = req.body;
         if (!name || !role) return res.status(400).json({ error: 'Name and role are required' });
 
@@ -63,6 +85,12 @@ const updateStaff = async (req, res, next) => {
  */
 const deleteStaff = async (req, res, next) => {
     try {
+        const isAdmin = isUserAdmin(req);
+        if (!isAdmin) {
+            const [[existing]] = await pool.execute('SELECT id FROM staff WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]);
+            if (!existing) return res.status(404).json({ error: 'Staff member not found in your branch' });
+        }
+
         await pool.execute('DELETE FROM staff WHERE id=?', [req.params.id]);
         res.json({ success: true });
     } catch (err) { next(err); }
@@ -73,12 +101,20 @@ const deleteStaff = async (req, res, next) => {
  */
 const getStaffStats = async (req, res, next) => {
     try {
+        const isAdmin = isUserAdmin(req);
         const [[totals]] = await pool.execute(
-            `SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status = 'leave' THEN 1 ELSE 0 END) as on_leave
-             FROM staff`
+            isAdmin
+                ? `SELECT
+                    COUNT(*)::int as total,
+                    COUNT(*) FILTER (WHERE status = 'active')::int as active,
+                    COUNT(*) FILTER (WHERE status = 'leave')::int as on_leave
+                 FROM staff`
+                : `SELECT
+                    COUNT(*)::int as total,
+                    COUNT(*) FILTER (WHERE status = 'active')::int as active,
+                    COUNT(*) FILTER (WHERE status = 'leave')::int as on_leave
+                 FROM staff WHERE branch_id = ?`,
+            isAdmin ? [] : [req.branchId]
         );
         res.json(totals);
     } catch (err) { next(err); }

@@ -9,6 +9,7 @@ SET client_min_messages = warning;
 -- ──────────────────────────────────────────────────────────────
 -- PASS 0 — Drop all tables (safe re-run)
 -- ──────────────────────────────────────────────────────────────
+DROP TABLE IF EXISTS supplier_payments CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS retail_sale_items CASCADE;
 DROP TABLE IF EXISTS retail_sales CASCADE;
@@ -151,6 +152,7 @@ CREATE TABLE orders (
     pharmacy_id       INT                    DEFAULT NULL REFERENCES pharmacies(id) ON DELETE SET NULL,
     warehouse_id      INT                    DEFAULT NULL REFERENCES warehouses(id) ON DELETE SET NULL,
     staff_id          INT                    DEFAULT NULL,
+    created_by        INT                    DEFAULT NULL REFERENCES staff(id) ON DELETE SET NULL,
     expected_delivery DATE                   DEFAULT NULL,
     total_amount      DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     status            VARCHAR(50)   NOT NULL DEFAULT 'Pending',
@@ -250,6 +252,17 @@ CREATE TABLE payments (
     payment_method VARCHAR(50) DEFAULT 'Cash',
     reference_no VARCHAR(100) DEFAULT NULL,
     notes TEXT DEFAULT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE supplier_payments (
+    id SERIAL PRIMARY KEY,
+    supplier_id INT NOT NULL REFERENCES local_suppliers(id) ON DELETE CASCADE,
+    amount NUMERIC(15,2) NOT NULL,
+    payment_method VARCHAR(50) DEFAULT 'cash',
+    reference_no VARCHAR(100) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    branch_id INT DEFAULT 1 REFERENCES branches(id),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -98,14 +98,13 @@ describe('GET /api/doctors/:id/orders', () => {
     expect(Number(order.total_amount)).toBeCloseTo(125.5, 2);
   });
 
-  test.failing('branch-2 doctor orders return 404 for a branch-1 user @known-bug A-BUG-4', async () => {
+  test('branch-2 doctor orders return 404 for a branch-1 user @known-bug A-BUG-4', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.get('/api/doctors/4/orders');
-    // actual: 200 [] — the handler never checks that the doctor exists in scope.
     expect(res.status).toBe(404);
   });
 
-  test.failing('unknown doctor id orders return 404, not 200 @known-bug A-BUG-4', async () => {
+  test('unknown doctor id orders return 404, not 200 @known-bug A-BUG-4', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.get('/api/doctors/9999/orders');
     // actual: 200 [] — no existence check; an enumeration oracle is missing.
@@ -262,10 +261,9 @@ describe('Pharmacy writes', () => {
     expect((await one('SELECT name FROM pharmacies WHERE id = 4', [])).name).toBe('Cairo Care Pharmacy');
   });
 
-  test.failing('branch-2 pharmacy update returns 404 for a branch-1 CRM user @known-bug A-BUG-7', async () => {
+  test('branch-2 pharmacy update returns 404 for a branch-1 CRM user @known-bug A-BUG-7', async () => {
     const crm = await loginAs('crm1');
     const res = await crm.put('/api/pharmacies/4').send({ name: 'Hijack', area: 'Cairo' });
-    // actual: 200 { success:true } even though zero rows matched the branch filter.
     expect(res.status).toBe(404);
   });
 
@@ -282,7 +280,7 @@ describe('Pharmacy writes', () => {
     expect(await count('pharmacies', 'WHERE id = 4')).toBe(1);
   });
 
-  test.failing('branch-2 pharmacy delete returns 404 for a branch-1 CRM user @known-bug A-BUG-7', async () => {
+  test('branch-2 pharmacy delete returns 404 for a branch-1 CRM user @known-bug A-BUG-7', async () => {
     const crm = await loginAs('crm1');
     const res = await crm.delete('/api/pharmacies/4');
     // actual: 200 { success:true } even though zero rows matched the branch filter.

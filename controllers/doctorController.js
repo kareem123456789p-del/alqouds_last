@@ -124,6 +124,15 @@ const getDoctorOrders = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Check if doctor exists in caller's branch
+        const [docCheck] = await db.query(
+            'SELECT id FROM doctors WHERE id = $1 AND branch_id = $2',
+            [id, req.branchId]
+        );
+        if (docCheck.length === 0) {
+            return res.status(404).json({ error: 'Doctor not found in this branch' });
+        }
+
         // Complex query to get order and its first distinct item summary for the profile view
         const query = `
             SELECT 

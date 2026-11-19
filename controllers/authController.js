@@ -26,6 +26,10 @@ const login = async (req, res) => {
 
         const user = users[0];
 
+        if (user.status && user.status !== 'active') {
+            return res.status(401).json({ success: false, error: 'User account is not active.' });
+        }
+
         if (!user.password_hash) {
              return res.status(401).json({ success: false, error: 'User does not have a password set.' });
         }
@@ -293,21 +297,23 @@ const switchBranch = async (req, res) => {
         const session = sessions.get(token);
         
         // Ensure user is an admin
-        if (session.role !== 'ADMIN' && session.role !== 'Admin' && session.role !== 'Super Admin') {
+        const role = (session.role || '').toUpperCase();
+        if (role !== 'ADMIN' && role !== 'SUPER ADMIN') {
             return res.status(403).json({ error: 'Only admins can switch branches.' });
         }
 
-        if (!branch_id) {
-            return res.status(400).json({ error: 'branch_id is required.' });
+        const parsedBranchId = parseInt(branch_id, 10);
+        if (isNaN(parsedBranchId) || parsedBranchId <= 0) {
+            return res.status(400).json({ error: 'Invalid branch ID.' });
         }
 
         // Validate branch exists
-        const [branches] = await db.query('SELECT id FROM branches WHERE id = $1', [branch_id]);
+        const [branches] = await db.query('SELECT id FROM branches WHERE id = $1', [parsedBranchId]);
         if (branches.length === 0) {
             return res.status(404).json({ error: 'Branch not found.' });
         }
 
-        session.active_branch_id = parseInt(branch_id);
+        session.active_branch_id = parsedBranchId;
         res.json({ success: true, active_branch_id: session.active_branch_id });
     } catch (error) {
         console.error('switchBranch error:', error);

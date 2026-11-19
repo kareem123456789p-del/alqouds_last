@@ -62,10 +62,13 @@ const updatePharmacy = async (req, res, next) => {
         const { name, license_number, contact_person, area, phone, status, credit_limit } = req.body;
         if (!name || !area) return res.status(400).json({ error: 'Name and area are required' });
 
-        await pool.execute(
+        const [result] = await pool.execute(
             `UPDATE pharmacies SET name=?, license_number=?, contact_person=?, area=?, phone=?, status=?, credit_limit=? WHERE id=? AND branch_id=?`,
             [name, license_number || null, contact_person || null, area, phone || null, status || 'active', credit_limit || 20000, req.params.id, req.branchId]
         );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Pharmacy not found in caller branch.' });
+        }
         res.json({ success: true });
     } catch (err) { next(err); }
 };
@@ -75,7 +78,10 @@ const updatePharmacy = async (req, res, next) => {
  */
 const deletePharmacy = async (req, res, next) => {
     try {
-        await pool.execute('DELETE FROM pharmacies WHERE id=? AND branch_id=?', [req.params.id, req.branchId]);
+        const [result] = await pool.execute('DELETE FROM pharmacies WHERE id=? AND branch_id=?', [req.params.id, req.branchId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Pharmacy not found in caller branch.' });
+        }
         res.json({ success: true });
     } catch (err) { next(err); }
 };

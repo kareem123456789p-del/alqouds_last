@@ -40,6 +40,11 @@ async function migrate() {
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_${table}_branch ON ${table}(branch_id)`);
     console.log(`  ✓ ${table}.branch_id`);
   }
+
+  // BUG-003: orders.created_by column referenced by getOrderById
+  await db.execute(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by INT REFERENCES staff(id) ON DELETE SET NULL`);
+  console.log(`  ✓ orders.created_by`);
+
   console.log('Missing branch_id columns migration completed.');
 }
 

@@ -32,7 +32,7 @@ describe('GET /api/staff (documented: Auth + Scope)', () => {
     }
   });
 
-  test.failing('branch-1 employee listing never includes branch-2 staff @known-bug A-BUG-2', async () => {
+  test('branch-1 employee listing never includes branch-2 staff @known-bug A-BUG-2', async () => {
     const emp = await loginAs('emp1');
     const plain = await emp.get('/api/staff');
     expect(plain.status).toBe(200);
@@ -42,7 +42,6 @@ describe('GET /api/staff (documented: Auth + Scope)', () => {
     const spoofed = await emp.get('/api/staff?branch_id=2').set('x-branch-id', '2');
     expect(spoofed.status).toBe(200);
     expect(spoofed.body.map(s => s.name).some(n => BRANCH2_NAMES.test(n))).toBe(false);
-    // actual: both responses contain all 20 staff, including Branch Two Manager etc.
   });
 
   test('GET /api/staff/:id returns the caller branch record', async () => {
@@ -54,10 +53,9 @@ describe('GET /api/staff (documented: Auth + Scope)', () => {
     expect(res.body.email).toBe('emp1@test.local');
   });
 
-  test.failing('branch-1 employee cannot read a branch-2 staff member: 404 @known-bug A-BUG-2', async () => {
+  test('branch-1 employee cannot read a branch-2 staff member: 404 @known-bug A-BUG-2', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.get('/api/staff/12'); // bm2
-    // actual: 200 with Branch Two Manager's full record.
     expect(res.status).toBe(404);
   });
 
@@ -69,7 +67,7 @@ describe('GET /api/staff (documented: Auth + Scope)', () => {
 });
 
 describe('GET /api/staff/stats (documented: Auth + Scope)', () => {
-  test.failing('stats count only the caller branch, matching SQL COUNT(*) @known-bug A-BUG-3', async () => {
+  test('stats count only the caller branch, matching SQL COUNT(*) @known-bug A-BUG-3', async () => {
     const expected = await one(`
       SELECT COUNT(*)::int AS total,
              COUNT(*) FILTER (WHERE status = 'active')::int AS active,
@@ -79,7 +77,6 @@ describe('GET /api/staff/stats (documented: Auth + Scope)', () => {
     const emp = await loginAs('emp1');
     const res = await emp.get('/api/staff/stats');
     expect(res.status).toBe(200);
-    // actual: { total:'20', active:'20', on_leave:'0' } — global, not branch 1 (13).
     expect(Number(res.body.total)).toBe(expected.total);
     expect(Number(res.body.active)).toBe(expected.active);
     expect(Number(res.body.on_leave)).toBe(expected.on_leave);
@@ -87,25 +84,23 @@ describe('GET /api/staff/stats (documented: Auth + Scope)', () => {
 });
 
 describe('/api/staff writes (documented: Admin Only)', () => {
-  test.failing('employee cannot create staff: 403 @known-bug A-BUG-1', async () => {
+  test('employee cannot create staff: 403 @known-bug A-BUG-1', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.post('/api/staff')
       .send({ name: 'Illegal Hire', role: 'EMPLOYEE' });
-    // actual: 201 Created — staffController has no permission gate.
     expect(res.status).toBe(403);
   });
 
-  test.failing('employee cannot update a branch-2 staff member: 404 @known-bug A-BUG-1', async () => {
+  test('employee cannot update a branch-2 staff member: 404 @known-bug A-BUG-1', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.put('/api/staff/12')
       .send({ name: 'Hijacked', role: 'ADMIN' });
-    // actual: 200 { success:true }; the branch-2 row is mutated.
     expect(res.status).toBe(404);
     const row = await one('SELECT name FROM staff WHERE id = 12', []);
     expect(row.name).not.toBe('Hijacked');
   });
 
-  test.failing('employee cannot delete a branch-2 staff member: 404 @known-bug A-BUG-1', async () => {
+  test('employee cannot delete a branch-2 staff member: 404 @known-bug A-BUG-1', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.delete('/api/staff/12');
     // actual: 200 { success:true }; branch-2 staff id 12 is hard-deleted.

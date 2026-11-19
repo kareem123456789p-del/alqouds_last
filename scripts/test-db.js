@@ -127,6 +127,8 @@ const UNDOCUMENTED_BUT_REQUIRED_MIGRATIONS = [
   'migrate_strict_isolation.js',
   // fix(qa) BUG-001: controllers write branch_id on these tables.
   'migrate_missing_branch_columns.js',
+  // fix(qa) BUG-026: supplier_payments table for analyticsController
+  'migrate_supplier_payments.js',
 ];
 
 function runMigrations(list) {
@@ -209,12 +211,14 @@ async function verify() {
     'client_transactions', 'payments', 'retail_shifts', 'retail_sales',
     'retail_sale_items', 'stock_transfers', 'stock_transfer_items',
     'stock_audit_logs', 'returns', 'return_items', 'employee_withdrawals',
+    'supplier_payments',
   ];
   // Columns the controllers write unconditionally.
   const requiredColumns = [
     ['staff', 'registration_number'], ['staff', 'password_hash'], ['staff', 'branch_id'],
     ['warehouses', 'branch_id'],
     ['orders', 'branch_id'],
+    ['orders', 'created_by'],
     ['order_items', 'branch_id'],
     ['retail_sale_items', 'branch_id'],
     ['supplier_transactions', 'branch_id'],
