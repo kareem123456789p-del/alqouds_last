@@ -1,0 +1,43 @@
+{
+  "worker": "F",
+  "branch": "qa/F",
+  "domain": "Domain Invariants, ACID Atomicity, Concurrency, and Property-Based Tests",
+  "tests": {
+    "files": 4,
+    "cases": 19,
+    "passing": 19,
+    "known_bugs": 3
+  },
+  "invariants": [
+    { "name": "Stock Conservation (Transfer Lifecycle)", "golden_rule": 5, "verified": true, "note": "Stock conserved across PENDING -> IN_TRANSIT -> COMPLETED (merge) and PENDING -> IN_TRANSIT -> CANCELLED" },
+    { "name": "Customer Debt Conservation", "golden_rule": 8, "verified": true, "note": "Order creation increments debt and ledger, dispatch preserves debt, cancellation reverses debt to 0 net" },
+    { "name": "FEFO Allocation", "golden_rule": 7, "verified": true, "note": "Orders deduct from batch with earliest expiry date first" },
+    { "name": "Non-negative Stock", "golden_rule": 5, "verified": true, "note": "warehouse_inventory current_stock >= 0" },
+    { "name": "ACID Atomicity & Rollback", "golden_rule": 10, "verified": true, "note": "Failures during multi-step operations roll back DB modifications completely" },
+    { "name": "Client ID Resolution", "golden_rule": 6, "verified": true, "note": "doc/pharm prefix resolution validated with 100 generative property runs" },
+    { "name": "Subtotal & Discount Monotonicity", "golden_rule": null, "verified": true, "note": "200 generative property runs confirming pricing monotonicity and non-negativity" }
+  ],
+  "bugs": [
+    {
+      "id": "F-BUG-1",
+      "title": "Double-ship race condition allows duplicate inventory decrement on concurrent IN_TRANSIT transitions",
+      "severity": "critical",
+      "route": "PATCH /api/transfers/:id/status",
+      "summary": "transferController checks transfer.status === 'PENDING' without a FOR UPDATE lock on stock_transfers. Concurrent ship requests can both read PENDING, decrement warehouse_inventory twice, and leave physical stock short."
+    },
+    {
+      "id": "BUG-005",
+      "title": "Early validation return in createOrder leaves transaction open in postgres",
+      "severity": "high",
+      "route": "POST /api/orders",
+      "summary": "orderController calls beginTransaction() before checking required fields. If validation fails, it returns 400 without calling connection.rollback() or connection.release(), causing connection leaks (idle in transaction)."
+    },
+    {
+      "id": "B-BUG-14",
+      "title": "Stock transfer receive path violates NOT NULL constraint on warehouse_inventory.warehouse_id",
+      "severity": "high",
+      "route": "PATCH /api/transfers/:id/status (COMPLETED)",
+      "summary": "When completing a transfer for a product/batch that does not yet exist in the destination branch, transferController inserts into warehouse_inventory without providing warehouse_id, causing PG error 23502."
+    }
+  ]
+}
