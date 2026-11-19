@@ -55,7 +55,7 @@ describe('GET /api/warehouse/list', () => {
 });
 
 describe('GET /api/warehouse/stats', () => {
-  test.failing(
+  test(
     'returns counts and value that match raw SQL @known-bug B-BUG-3',
     async () => {
       const emp = await loginAs('emp1');
@@ -193,7 +193,7 @@ describe('PUT /api/warehouse/:id', () => {
     expect(Number(row.capacity)).toBe(777);
   });
 
-  test.failing(
+  test(
     'a branch-2 warehouse id must return 404, not silent success @known-bug B-BUG-4',
     async () => {
       const wh = await loginAs('wh1');
@@ -222,7 +222,7 @@ describe('DELETE /api/warehouse/:id', () => {
     expect(await one('SELECT * FROM warehouses WHERE id = $1', [id])).toBeNull();
   });
 
-  test.failing(
+  test(
     'a branch-2 warehouse id must return 404, not silent success @known-bug B-BUG-4',
     async () => {
       const wh = await loginAs('wh1');
@@ -232,7 +232,7 @@ describe('DELETE /api/warehouse/:id', () => {
     },
   );
 
-  test.failing(
+  test(
     'deleting a warehouse that still holds stock must be rejected with a 4xx, not cascade-delete inventory @known-bug B-BUG-5',
     async () => {
       const wh = await loginAs('wh1');

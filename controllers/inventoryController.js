@@ -71,6 +71,14 @@ exports.updateInventoryRecord = async (req, res) => {
         const { id } = req.params;
         const { current_stock, batch_number, expiry_date, qty_threshold, expiry_month_threshold } = req.body;
 
+        if (current_stock === undefined || current_stock === null || isNaN(Number(current_stock))) {
+            return res.status(400).json({ error: 'current_stock is required and must be a valid number' });
+        }
+        const stockNum = Number(current_stock);
+        if (stockNum < 0) {
+            return res.status(400).json({ error: 'current_stock must be non-negative' });
+        }
+
         console.log(`[UPDATE INVENTORY] id=${id}`);
         const [result] = await pool.execute(`
             UPDATE warehouse_inventory
@@ -81,7 +89,7 @@ exports.updateInventoryRecord = async (req, res) => {
                 expiry_month_threshold = ?
             WHERE id = ? AND branch_id = ?
         `, [
-            current_stock,
+            stockNum,
             batch_number  || null,
             expiry_date   || null,
             qty_threshold          !== undefined ? qty_threshold          : 20,

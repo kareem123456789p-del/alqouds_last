@@ -75,14 +75,45 @@ exports.updateProduct = async (req, res) => {
     const { name, base_uom, has_bulk, bulk_uom, conversion_factor, price } = req.body;
 
     try {
-        const baseUomId = await getOrCreateUomId(base_uom);
-        const bulkUomId = has_bulk ? await getOrCreateUomId(bulk_uom) : null;
-        const factor = has_bulk ? (conversion_factor || 1) : 1;
-        const unitPrice = parseFloat(price) || 0;
+        const [existing] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+        if (!existing || existing.length === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        const current = existing[0];
+
+        let baseUomId;
+        if (base_uom !== undefined && base_uom !== null) {
+            baseUomId = await getOrCreateUomId(base_uom);
+        } else {
+            baseUomId = current.base_uom_id;
+        }
+
+        let bulkUomId;
+        if (has_bulk !== undefined) {
+            bulkUomId = has_bulk ? await getOrCreateUomId(bulk_uom) : null;
+        } else {
+            bulkUomId = current.bulk_uom_id;
+        }
+
+        let factor;
+        if (conversion_factor !== undefined && conversion_factor !== null) {
+            factor = has_bulk !== false ? conversion_factor : 1;
+        } else {
+            factor = current.conversion_factor || 1;
+        }
+
+        let unitPrice;
+        if (price !== undefined && price !== null) {
+            unitPrice = parseFloat(price) || 0;
+        } else {
+            unitPrice = current.price;
+        }
+
+        const productName = (name !== undefined && name !== null) ? name : current.name;
 
         await db.query(
             'UPDATE products SET name = ?, base_uom_id = ?, bulk_uom_id = ?, conversion_factor = ?, price = ? WHERE id = ?',
-            [name, baseUomId, bulkUomId, factor, unitPrice, id]
+            [productName, baseUomId, bulkUomId, factor, unitPrice, id]
         );
         res.json({ message: 'Product updated successfully' });
     } catch (err) {

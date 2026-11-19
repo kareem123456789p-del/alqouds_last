@@ -6,20 +6,56 @@ exports.createTransfer = async (req, res) => {
         const { destination_branch_id, items, notes } = req.body;
         const source_branch_id = req.branchId;
 
-        if (!destination_branch_id || destination_branch_id == source_branch_id) {
+        if (!destination_branch_id || isNaN(Number(destination_branch_id)) || Number(destination_branch_id) === Number(source_branch_id)) {
             return res.status(400).json({ error: 'Invalid destination branch.' });
         }
-        if (!items || !items.length) {
+        if (!items || !Array.isArray(items) || !items.length) {
             return res.status(400).json({ error: 'Transfer must contain items.' });
+        }
+
+        // Verify destination branch exists
+        const [destBranch] = await conn.execute('SELECT id FROM branches WHERE id = $1', [destination_branch_id]);
+        if (!destBranch || !destBranch.length) {
+            return res.status(400).json({ error: 'Destination branch does not exist.' });
+        }
+
+        // Validate items
+        for (const item of items) {
+            const qty = Number(item.quantity);
+            if (!qty || isNaN(qty) || qty <= 0) {
+                return res.status(400).json({ error: 'Quantity must be greater than zero.' });
+            }
+            const [batchRows] = await conn.execute(
+                'SELECT id, product_id, current_stock FROM warehouse_inventory WHERE id = $1 AND branch_id = $2',
+                [item.batch_id, source_branch_id]
+            );
+            if (!batchRows.length) {
+                return res.status(400).json({ error: 'Batch not found in caller branch.' });
+            }
+            if (Number(batchRows[0].product_id) !== Number(item.item_id)) {
+                return res.status(400).json({ error: 'Item ID does not match batch product.' });
+            }
+            if (Number(batchRows[0].current_stock) < qty) {
+                return res.status(400).json({ error: 'Insufficient stock for batch ' + item.batch_id });
+            }
         }
 
         await conn.beginTransaction();
 
-        // Generate transfer_code
+        // Generate transfer_code safely without race / collision
         const year = new Date().getFullYear();
-        const codeResult = await conn.execute('SELECT COUNT(*) as count FROM stock_transfers');
-        const count = parseInt(codeResult[0][0].count) || 0;
-        const transfer_code = 'TR-' + year + '-' + (count + 1).toString().padStart(4, '0');
+        const [maxRows] = await conn.execute(
+            `SELECT transfer_code FROM stock_transfers WHERE transfer_code LIKE 'TR-${year}-%' ORDER BY id DESC LIMIT 100`
+        );
+        let maxSeq = 0;
+        for (const row of maxRows) {
+            const match = row.transfer_code && row.transfer_code.match(/TR-\d{4}-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (num > maxSeq) maxSeq = num;
+            }
+        }
+        const transfer_code = `TR-${year}-${String(maxSeq + 1).padStart(4, '0')}`;
 
         const [insertRes] = await conn.execute(
             'INSERT INTO stock_transfers (transfer_code, source_branch_id, destination_branch_id, status, notes, created_by_staff_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
@@ -29,17 +65,9 @@ exports.createTransfer = async (req, res) => {
         const transfer_id = insertRes.insertId || insertRes[0]?.id;
 
         for (const item of items) {
-            // Verify source batch has enough stock
-            const [batchRows] = await conn.execute(
-                'SELECT current_stock FROM warehouse_inventory WHERE id = $1 AND branch_id = $2',
-                [item.batch_id, source_branch_id]
-            );
-            if (!batchRows.length || batchRows[0].current_stock < item.quantity) {
-                throw new Error('Insufficient stock for batch ' + item.batch_id);
-            }
             await conn.execute(
                 'INSERT INTO stock_transfer_items (transfer_id, item_id, batch_id, quantity) VALUES ($1, $2, $3, $4)',
-                [transfer_id, item.item_id, item.batch_id, item.quantity]
+                [transfer_id, item.item_id, item.batch_id, Number(item.quantity)]
             );
         }
 
@@ -48,7 +76,7 @@ exports.createTransfer = async (req, res) => {
     } catch (err) {
         await conn.rollback();
         console.error(err);
-        res.status(500).json({ error: err.message || 'Server error' });
+        res.status(400).json({ error: err.message || 'Server error' });
     } finally {
         conn.release();
     }
@@ -59,7 +87,8 @@ exports.getTransfers = async (req, res) => {
         let query = 'SELECT t.*, sb.name as source_name, db.name as dest_name, c.name as creator_name, p.name as processor_name FROM stock_transfers t JOIN branches sb ON t.source_branch_id = sb.id JOIN branches db ON t.destination_branch_id = db.id LEFT JOIN staff c ON t.created_by_staff_id = c.id LEFT JOIN staff p ON t.processed_by_staff_id = p.id';
         let params = [];
 
-        const isAdmin = (req.user.role === 'ADMIN' || req.user.role === 'Admin' || req.user.role === 'Super Admin');
+        const role = (req.user?.role || '').toUpperCase().trim();
+        const isAdmin = role === 'ADMIN' || role === 'SUPER ADMIN';
         if (!isAdmin) {
             query += ' WHERE t.source_branch_id = $1 OR t.destination_branch_id = $2';
             params = [req.branchId, req.branchId];
@@ -80,7 +109,8 @@ exports.updateStatus = async (req, res) => {
     try {
         const { status } = req.body;
         const transfer_id = req.params.id;
-        const isAdmin = (req.user.role === 'ADMIN' || req.user.role === 'Admin' || req.user.role === 'Super Admin');
+        const role = (req.user?.role || '').toUpperCase().trim();
+        const isAdmin = role === 'ADMIN' || role === 'SUPER ADMIN';
 
         if (!['IN_TRANSIT', 'COMPLETED', 'CANCELLED'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
@@ -88,8 +118,11 @@ exports.updateStatus = async (req, res) => {
 
         await conn.beginTransaction();
 
-        const [transferRows] = await conn.execute('SELECT * FROM stock_transfers WHERE id = $1', [transfer_id]);
-        if (!transferRows.length) throw new Error('Transfer not found');
+        const [transferRows] = await conn.execute('SELECT * FROM stock_transfers WHERE id = $1 FOR UPDATE', [transfer_id]);
+        if (!transferRows.length) {
+            await conn.rollback();
+            return res.status(404).json({ error: 'Transfer not found' });
+        }
         const transfer = transferRows[0];
 
         // Authorization & State Machine
@@ -119,6 +152,12 @@ exports.updateStatus = async (req, res) => {
             }
             if (transfer.status !== 'IN_TRANSIT') throw new Error('Can only receive IN_TRANSIT transfers.');
 
+            const [destWhs] = await conn.execute(
+                'SELECT id FROM warehouses WHERE branch_id = $1 ORDER BY id ASC LIMIT 1',
+                [transfer.destination_branch_id]
+            );
+            const destWarehouseId = destWhs.length ? destWhs[0].id : (Number(transfer.destination_branch_id) === 2 ? 3 : 1);
+
             const [items] = await conn.execute('SELECT * FROM stock_transfer_items WHERE transfer_id = $1', [transfer_id]);
             for (const item of items) {
                 const [srcBatch] = await conn.execute('SELECT * FROM warehouse_inventory WHERE id = $1', [item.batch_id]);
@@ -135,8 +174,8 @@ exports.updateStatus = async (req, res) => {
                     await conn.execute('UPDATE warehouse_inventory SET current_stock = current_stock + $1 WHERE id = $2', [item.quantity, destBatchId]);
                 } else {
                     const [newBatch] = await conn.execute(
-                        'INSERT INTO warehouse_inventory (product_id, batch_number, expiry_date, current_stock, unit_price, branch_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-                        [item.item_id, srcBatch[0].batch_number, srcBatch[0].expiry_date, item.quantity, srcBatch[0].unit_price, transfer.destination_branch_id]
+                        'INSERT INTO warehouse_inventory (warehouse_id, product_id, batch_number, expiry_date, current_stock, unit_price, branch_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+                        [destWarehouseId, item.item_id, srcBatch[0].batch_number, srcBatch[0].expiry_date, item.quantity, srcBatch[0].unit_price, transfer.destination_branch_id]
                     );
                     destBatchId = newBatch.insertId || newBatch[0]?.id;
                 }
@@ -152,6 +191,7 @@ exports.updateStatus = async (req, res) => {
                 throw new Error('Only Admin or source branch can cancel.');
             }
             if (transfer.status === 'COMPLETED') throw new Error('Cannot cancel completed transfers.');
+            if (transfer.status === 'CANCELLED') throw new Error('Transfer is already cancelled.');
 
             if (transfer.status === 'IN_TRANSIT') {
                 const [items] = await conn.execute('SELECT * FROM stock_transfer_items WHERE transfer_id = $1', [transfer_id]);
@@ -183,7 +223,8 @@ exports.updateStatus = async (req, res) => {
 
 exports.getAuditLogs = async (req, res) => {
     try {
-        const isAdmin = (req.user.role === 'ADMIN' || req.user.role === 'Admin' || req.user.role === 'Super Admin');
+        const role = (req.user?.role || '').toUpperCase().trim();
+        const isAdmin = role === 'ADMIN' || role === 'SUPER ADMIN';
         let query = 'SELECT l.*, s.name as staff_name, p.name as item_name FROM stock_audit_logs l LEFT JOIN staff s ON l.staff_id = s.id LEFT JOIN products p ON l.item_id = p.id';
         let params = [];
 

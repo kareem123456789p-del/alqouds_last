@@ -5,25 +5,31 @@ const pool = require('../config/db');
  */
 const getStats = async (req, res, next) => {
     try {
-        const [[{ warehouseCount }]] = await pool.execute(
+        const [[row1]] = await pool.execute(
             'SELECT COUNT(*) AS warehouseCount FROM warehouses WHERE branch_id = ?', [req.branchId]
         );
-        const [[{ totalValue }]] = await pool.execute(`
+        const warehouseCount = row1?.warehouseCount ?? row1?.warehousecount ?? 0;
+
+        const [[row2]] = await pool.execute(`
             SELECT COALESCE(SUM(wi.current_stock * p.price), 0) AS totalValue
             FROM warehouse_inventory wi
             LEFT JOIN products p ON p.id = wi.product_id
             WHERE p.is_active = 1 AND p.is_deleted = 0 AND wi.branch_id = ${req.branchId}
         `);
-        const [[{ productLines }]] = await pool.execute(`
+        const totalValue = row2?.totalValue ?? row2?.totalvalue ?? 0;
+
+        const [[row3]] = await pool.execute(`
             SELECT COUNT(DISTINCT wi.product_id) AS productLines 
             FROM warehouse_inventory wi
             LEFT JOIN products p ON p.id = wi.product_id
             WHERE p.is_active = 1 AND p.is_deleted = 0 AND wi.branch_id = ${req.branchId}
         `);
+        const productLines = row3?.productLines ?? row3?.productlines ?? 0;
+
         res.json({
-            active_warehouses: warehouseCount,
+            active_warehouses: Number(warehouseCount),
             total_inventory_value: parseFloat(totalValue).toFixed(2),
-            product_lines: productLines
+            product_lines: Number(productLines)
         });
     } catch (err) { next(err); }
 };
@@ -172,10 +178,13 @@ const updateWarehouse = async (req, res, next) => {
         return res.status(400).json({ error: 'Name and location are required.' });
     }
     try {
-        await pool.execute(
+        const [result] = await pool.execute(
             'UPDATE warehouses SET name = ?, location = ?, capacity = ? WHERE id = ? AND branch_id = ?',
             [name.trim(), location.trim(), parseInt(capacity) || 10000, id, req.branchId]
         );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Warehouse not found' });
+        }
         res.json({ success: true });
     } catch (err) { next(err); }
 };
@@ -186,6 +195,19 @@ const updateWarehouse = async (req, res, next) => {
 const deleteWarehouse = async (req, res, next) => {
     const { id } = req.params;
     try {
+        const [whRows] = await pool.execute('SELECT id FROM warehouses WHERE id = ? AND branch_id = ?', [id, req.branchId]);
+        if (!whRows || whRows.length === 0) {
+            return res.status(404).json({ error: 'Warehouse not found' });
+        }
+
+        const [stockRows] = await pool.execute(
+            'SELECT COUNT(*) as cnt FROM warehouse_inventory WHERE warehouse_id = ? AND current_stock > 0',
+            [id]
+        );
+        const cnt = stockRows[0]?.cnt ?? stockRows[0]?.count ?? 0;
+        if (Number(cnt) > 0) {
+            return res.status(400).json({ error: 'Cannot delete warehouse with active stock' });
+        }
         await pool.execute('DELETE FROM warehouses WHERE id = ? AND branch_id = ?', [id, req.branchId]);
         res.json({ success: true });
     } catch (err) { next(err); }

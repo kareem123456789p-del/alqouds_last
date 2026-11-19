@@ -155,7 +155,7 @@ describe('PUT /api/inventory/:id', () => {
     expect(Number(unchanged.current_stock)).toBe(Number(foreign.current_stock));
   });
 
-  test.failing(
+  test(
     'missing current_stock must be rejected with 400, not 500 @known-bug B-BUG-6',
     async () => {
       const emp = await loginAs('emp1');
@@ -167,7 +167,7 @@ describe('PUT /api/inventory/:id', () => {
     },
   );
 
-  test.failing(
+  test(
     'a negative current_stock must be rejected, never persisted @known-bug B-BUG-7',
     async () => {
       const emp = await loginAs('emp1');

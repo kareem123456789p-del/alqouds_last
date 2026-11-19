@@ -92,7 +92,7 @@ describe('POST /api/products', () => {
 });
 
 describe('PUT /api/products/:id', () => {
-  test.failing(
+  test(
     'a partial update that omits price must not silently reset the price @known-bug B-BUG-1',
     async () => {
       const emp = await loginAs('emp1');
@@ -114,7 +114,7 @@ describe('PUT /api/products/:id', () => {
     },
   );
 
-  test.failing(
+  test(
     'updating a nonexistent product id must not return success @known-bug B-BUG-2',
     async () => {
       const emp = await loginAs('emp1');

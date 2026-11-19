@@ -106,7 +106,7 @@ describe('POST /api/transfers — validation', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing(
+  test(
     'rejects a negative or zero quantity with 400 @known-bug B-BUG-8',
     async () => {
       const emp = await loginAs('emp1');
@@ -119,7 +119,7 @@ describe('POST /api/transfers — validation', () => {
     },
   );
 
-  test.failing(
+  test(
     'reports insufficient, missing and foreign batches as 400, not 500 @known-bug B-BUG-9',
     async () => {
       const emp = await loginAs('emp1');
@@ -138,7 +138,7 @@ describe('POST /api/transfers — validation', () => {
     },
   );
 
-  test.failing(
+  test(
     'rejects an item_id that does not belong to the batch product @known-bug B-BUG-10',
     async () => {
       const emp = await loginAs('emp1');
@@ -149,7 +149,7 @@ describe('POST /api/transfers — validation', () => {
     },
   );
 
-  test.failing(
+  test(
     'validates that the destination branch exists @known-bug B-BUG-14',
     async () => {
       const emp = await loginAs('emp1');
@@ -328,7 +328,7 @@ describe('PATCH /api/transfers/:id/status — receive', () => {
     expect(Number(audit.item_id)).toBe(2);
   });
 
-  test.failing(
+  test(
     'receiving with no matching destination batch must create one and succeed @known-bug B-BUG-11',
     async () => {
       const emp1 = await loginAs('emp1');
@@ -391,7 +391,7 @@ describe('PATCH /api/transfers/:id/status — cancel', () => {
 });
 
 describe('Cross-branch administration', () => {
-  test.failing(
+  test(
     'SUPER ADMIN may ship a transfer whose source is another branch @known-bug B-BUG-12',
     async () => {
       const emp2 = await loginAs('emp2');
@@ -445,7 +445,7 @@ describe('GET /api/transfers/audit-logs', () => {
 });
 
 describe('transfer_code generation', () => {
-  test.failing(
+  test(
     'must generate a unique code even when the COUNT-based sequence collides @known-bug B-BUG-13',
     async () => {
       const emp = await loginAs('emp1');
