@@ -52,14 +52,23 @@ npx jest tests/integration/invariants   # Invariants, Atomicity, Concurrency, Fa
 
 ---
 
-## 4. Key Documentation & Artifacts
+## 4. Comprehensive Repository Documentation Guide
 
-- **Detailed Master Guide**: [continuous.md](file:///home/ahmed/Projects/alqouds_last/continuous.md) — Complete file inventory, architecture, and historical ledger.
-- **Bug Ledger**: [qa/BUGS.md](file:///home/ahmed/Projects/alqouds_last/qa/BUGS.md) — All 28 defects cataloged with reproduction steps, root causes, and fix commits.
-- **Comprehensive QA Report**: [qa/QA_REPORT.md](file:///home/ahmed/Projects/alqouds_last/qa/QA_REPORT.md) — Executive summary, coverage stats, Golden Rules audit, and final gate verdict.
-- **QA State Tracker**: [qa/STATE.md](file:///home/ahmed/Projects/alqouds_last/qa/STATE.md) — Phase status and worker commit ledger.
-- **Route Inventory**: [qa/ROUTE_INVENTORY.md](file:///home/ahmed/Projects/alqouds_last/qa/ROUTE_INVENTORY.md) — 111 mapped endpoints across 19 controllers.
-- **Traceability Matrix**: [qa/TRACEABILITY.md](file:///home/ahmed/Projects/alqouds_last/qa/TRACEABILITY.md) — Requirements to test mapping.
+Every incoming AI agent should use these documents to navigate, understand, and safely modify the codebase:
+
+| Document / Location | Primary Purpose | How It Guides Incoming Agents |
+|---|---|---|
+| [agents.md](file:///home/ahmed/Projects/alqouds_last/agents.md) | **Master Handover Guide** | **Start here.** Quick orientation, environment facts, test commands, and high-level architectural state. |
+| [continuous.md](file:///home/ahmed/Projects/alqouds_last/continuous.md) | **Continuous State & Architecture** | Single source of truth for complete file inventory, PostgreSQL cluster details, migration sequence, and domain division. |
+| [readme.md](file:///home/ahmed/Projects/alqouds_last/readme.md) | **System Specification & Oracles** | Authoritative requirements document containing the **10 Golden Rules**, route tables, RBAC permissions, and business rules. |
+| [qa/BUSINESS_LOGIC_AND_TEST_PLAN.md](file:///home/ahmed/Projects/alqouds_last/qa/BUSINESS_LOGIC_AND_TEST_PLAN.md) | **Business Logic Decisions & User Q&A** | Holds the active domain questions, user decisions, route options, and implementation directives for new features or behavior changes. |
+| [qa/BUGS.md](file:///home/ahmed/Projects/alqouds_last/qa/BUGS.md) | **Defect Ledger (BUG-001..BUG-028)** | Complete history of all 28 identified bugs, with reproduction steps, affected endpoints, severity, and verified fix commits. |
+| [qa/QA_REPORT.md](file:///home/ahmed/Projects/alqouds_last/qa/QA_REPORT.md) | **Executive QA Audit & Coverage** | Formal QA sign-off containing Istanbul test coverage stats (lines/branches), Golden Rules compliance, and deployment readiness verdict. |
+| [qa/STATE.md](file:///home/ahmed/Projects/alqouds_last/qa/STATE.md) | **Orchestrator Checkpoint** | Chronological record of commits, multi-agent worker status (Workers A–F), and phase progression. |
+| [qa/ROUTE_INVENTORY.md](file:///home/ahmed/Projects/alqouds_last/qa/ROUTE_INVENTORY.md) | **Canonical Route Map** | Complete inventory of all 111 API endpoints across 19 route modules with HTTP methods, query parameters, and access controls. |
+| [qa/TRACEABILITY.md](file:///home/ahmed/Projects/alqouds_last/qa/TRACEABILITY.md) | **Requirements Traceability Matrix** | Bidirectional mapping linking every specification clause and Golden Rule to dedicated integration test suites. |
+| [setup_pg.sql](file:///home/ahmed/Projects/alqouds_last/setup_pg.sql) & [scripts/](file:///home/ahmed/Projects/alqouds_last/scripts/) | **Database Schema & Migrations** | Baseline PostgreSQL DDL and chronological migration scripts executed by `tests/setup/globalSetup.js`. |
+| [tests/helpers/](file:///home/ahmed/Projects/alqouds_last/tests/helpers/) | **Test Infrastructure Helpers** | `db.js` (raw pg queries & stock calculations), `auth.js` (cookie jars & role login helpers), and `seed.js` (multi-branch test data generator). |
 
 ---
 
