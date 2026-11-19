@@ -1,0 +1,136 @@
+{
+  "worker": "C",
+  "branch": "qa/C",
+  "domain": "Wholesale Orders, Collections, Withdrawals",
+  "tests": {
+    "files": 6,
+    "cases": 65,
+    "passing": 65,
+    "known_bugs": 9
+  },
+  "routes": [
+    { "method": "GET", "path": "/api/orders", "covered": true, "note": "paginated orders list; cross-branch leakage C-BUG-3" },
+    { "method": "POST", "path": "/api/orders", "covered": true, "note": "order creation with items; debt charged once Golden Rule 8; credit limit; idle transaction on early return C-BUG-4" },
+    { "method": "PUT", "path": "/api/orders/:id/cancel", "covered": true, "note": "pending order cancellation reverses debt with CANCEL ledger row; cross-branch cancel C-BUG-3" },
+    { "method": "GET", "path": "/api/orders/:id/details", "covered": true, "note": "joins nonexistent orders.created_by column causing 500 C-BUG-2" },
+    { "method": "PUT", "path": "/api/orders/:id/dispatch", "covered": true, "note": "FEFO stock deduction, debt unchanged, rollback on insufficient stock; cross-branch dispatch C-BUG-3" },
+    { "method": "GET", "path": "/api/orders/:id/items", "covered": true, "note": "order items with product names; cross-branch access C-BUG-3" },
+    { "method": "POST", "path": "/api/orders/:id/return", "covered": true, "note": "restores stock, reduces debt with RETURN ledger row, status becomes Returned on full return" },
+    { "method": "GET", "path": "/api/orders/clients", "covered": true, "note": "queries nonexistent clients table causing 500 C-BUG-1" },
+    { "method": "GET", "path": "/api/orders/history/:clientType/:clientId", "covered": true, "note": "history grouped by month; outstanding balance computed from orders sum instead of total_debt C-BUG-10" },
+    { "method": "GET", "path": "/api/orders/product/:id/cost-price", "covered": true, "note": "returns purchase_price and selling price; 404 on unknown id" },
+    { "method": "GET", "path": "/api/collections", "covered": true, "note": "recent payments for branch; permission gate" },
+    { "method": "POST", "path": "/api/collections", "covered": true, "note": "records payment, decrements debt, writes payments and PAYMENT ledger rows; non-doc prefix targets pharmacy 1 C-BUG-6; overpayment drives negative debt C-BUG-7" },
+    { "method": "GET", "path": "/api/collections/client/:id/monthly", "covered": true, "note": "monthly collections for doctor/pharmacy" },
+    { "method": "GET", "path": "/api/collections/debts", "covered": true, "note": "lists clients with total_debt > 0" },
+    { "method": "GET", "path": "/api/collections/summary", "covered": true, "note": "aggregate branch collections and total market debt" },
+    { "method": "GET", "path": "/api/collections/transactions", "covered": true, "note": "unified payments transaction history" },
+    { "method": "GET", "path": "/api/withdrawals", "covered": true, "note": "lists withdrawals with running monthly totals and high ratio flag" },
+    { "method": "POST", "path": "/api/withdrawals", "covered": true, "note": "records withdrawal, tracks 50% salary threshold; negative amount accepted C-BUG-9; cross-branch staff lookup C-BUG-8" },
+    { "method": "GET", "path": "/api/withdrawals/stats", "covered": true, "note": "monthly total, top employee, and 50% salary alert rows" }
+  ],
+  "bugs": [
+    {
+      "id": "C-BUG-1",
+      "title": "GET /api/orders/clients queries nonexistent clients table -> 500",
+      "severity": "high",
+      "route": "GET /api/orders/clients",
+      "spec": "readme.md §8.2; clients list",
+      "expected": "200 with union of doctors and pharmacies",
+      "actual": "500 relation clients does not exist",
+      "test": "tests/integration/finance/orders-create.test.js:145",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-2",
+      "title": "GET /api/orders/:id/details joins nonexistent orders.created_by -> 500",
+      "severity": "high",
+      "route": "GET /api/orders/:id/details",
+      "spec": "readme.md §8.2; full order details for invoice / PDF",
+      "expected": "200 with order and joined staff/client details",
+      "actual": "500 column o.created_by does not exist",
+      "test": "tests/integration/finance/orders-lifecycle.test.js:203",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-3",
+      "title": "Orders endpoints are not branch-scoped (Golden Rule 1 violation)",
+      "severity": "critical",
+      "route": "GET /api/orders, GET /api/orders/:id/items, PUT /api/orders/:id/cancel, PUT /api/orders/:id/dispatch",
+      "spec": "Golden Rule 1; strict multi-branch data isolation",
+      "expected": "Branch-1 user sees and mutates only branch-1 orders; 404/403 for branch-2 orders",
+      "actual": "Branch-1 user can list, inspect items, dispatch, and cancel branch-2 orders",
+      "test": "tests/integration/finance/orders-scope.test.js:31",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-4",
+      "title": "createOrder early returns inside open transaction leave connection idle in transaction",
+      "severity": "high",
+      "route": "POST /api/orders",
+      "spec": "Connection pool hygiene and transaction lifecycle",
+      "expected": "Early return rolls back and releases connection",
+      "actual": "Connection remains checked out and idle in transaction until timeout",
+      "test": "tests/integration/finance/orders-create.test.js:134",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-6",
+      "title": "Collections treats any non-doc prefix as pharmacy 1 instead of returning 400",
+      "severity": "medium",
+      "route": "POST /api/collections",
+      "spec": "Golden Rule 6; strict prefix validation",
+      "expected": "400 Bad Request on invalid prefix like xyz-1",
+      "actual": "Silently applies payment to pharmacy 1",
+      "test": "tests/integration/finance/collections.test.js:120",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-7",
+      "title": "Collections overpayment drives client total_debt negative",
+      "severity": "medium",
+      "route": "POST /api/collections",
+      "spec": "readme.md §8.7",
+      "expected": "Overpayment rejected or capped at outstanding balance",
+      "actual": "total_debt decremented below zero into negative balance",
+      "test": "tests/integration/finance/collections.test.js:130",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-8",
+      "title": "Withdrawals staff lookup is not branch-scoped",
+      "severity": "high",
+      "route": "POST /api/withdrawals",
+      "spec": "Golden Rule 1; branch isolation",
+      "expected": "404/400 when attempting to record withdrawal for staff in another branch",
+      "actual": "201 Created and records withdrawal under caller branch",
+      "test": "tests/integration/finance/withdrawals.test.js:80",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-9",
+      "title": "Withdrawals endpoint accepts negative amounts",
+      "severity": "high",
+      "route": "POST /api/withdrawals",
+      "spec": "Input validation contract; amounts must be positive",
+      "expected": "400 Bad Request on negative amount",
+      "actual": "201 Created and reduces monthly total",
+      "test": "tests/integration/finance/withdrawals.test.js:70",
+      "status": "open"
+    },
+    {
+      "id": "C-BUG-10",
+      "title": "getClientHistory calculates outstanding balance from sum of orders instead of total_debt",
+      "severity": "medium",
+      "route": "GET /api/orders/history/:clientType/:clientId",
+      "spec": "readme.md §8.2; client history summary",
+      "expected": "outstanding balance reflects current client total_debt after collections/payments",
+      "actual": "outstanding balance always equals sum of all non-cancelled order totals",
+      "test": "tests/integration/finance/orders-create.test.js:208",
+      "status": "open"
+    }
+  ],
+  "questions": [],
+  "gaps": [],
+  "notes": "Worker C test suite passed: 6 suites, 65 tests passed (including test.failing regressions for 9 bugs). 100% route coverage."
+}

@@ -1,0 +1,114 @@
+{
+  "worker": "E",
+  "branch": "qa/E",
+  "domain": "Analytics, Dashboard, Frontend Pages, Arabic PDF Pipeline",
+  "tests": {
+    "files": 4,
+    "cases": 54,
+    "passing": 54,
+    "known_bugs": 7
+  },
+  "routes": [
+    { "method": "GET", "path": "/api/analytics/branch-performance", "covered": true, "note": "branch performance breakdown for admin and analyst" },
+    { "method": "GET", "path": "/api/analytics/branches", "covered": true, "note": "branch list for filter dropdown, is_admin flag" },
+    { "method": "GET", "path": "/api/analytics/category-distribution", "covered": true, "note": "category revenue distribution breakdown" },
+    { "method": "GET", "path": "/api/analytics/critical-alerts", "covered": true, "note": "dead stock and expiry alerts" },
+    { "method": "GET", "path": "/api/analytics/sales-purchases-timeline", "covered": true, "note": "sales vs purchases cash spread timeline" },
+    { "method": "GET", "path": "/api/analytics/summary", "covered": true, "note": "5 KPI values, non-admin branch override leak E-BUG-1" },
+    { "method": "GET", "path": "/api/analytics/suppliers-payables", "covered": true, "note": "missing supplier_payments table crashes 500 E-BUG-7" },
+    { "method": "POST", "path": "/api/analytics/suppliers/pay", "covered": true, "note": "missing supplier_payments table crashes 500 E-BUG-7; trusts body.branch_id E-BUG-2" },
+    { "method": "GET", "path": "/api/analytics/top-products", "covered": true, "note": "top products by revenue" },
+    { "method": "GET", "path": "/api/dashboard/stats", "covered": true, "note": "6 dashboard KPIs; registered_clients ignores pharmacies E-BUG-6" },
+    { "method": "GET", "path": "/", "covered": true, "note": "express.static intercepts / and serves index.html bypassing role redirect E-BUG-3" },
+    { "method": "GET", "path": "/dashboard", "covered": true, "note": "protected admin dashboard; redirects non-admin to index.html" },
+    { "method": "GET", "path": "/pos", "covered": true, "note": "serves retail_sales terminal for authenticated users" },
+    { "method": "GET", "path": "/pos.html", "covered": true, "note": "static POS page alias" },
+    { "method": "GET", "path": "/dashboard.html", "covered": true, "note": "static admin dashboard page served to regular employees without requireAdmin E-BUG-4" },
+    { "method": "GET", "path": "/login.html", "covered": true, "note": "public login page" },
+    { "method": "GET", "path": "/js/authGuard.js", "covered": true, "note": "public static auth guard script" }
+  ],
+  "bugs": [
+    {
+      "id": "E-BUG-1",
+      "title": "Analytics endpoints accept ?branch_id=2 from non-admins (Golden Rule 1 violation)",
+      "severity": "critical",
+      "route": "GET /api/analytics/summary, /branch-performance, etc.",
+      "spec": "Golden Rule 1; multi-branch isolation",
+      "expected": "Non-admin query param ?branch_id=2 is ignored; only caller branch data returned",
+      "actual": "Controller accepts ?branch_id=2 from anyone and queries foreign branch data",
+      "test": "tests/integration/ui/analytics.test.js:82",
+      "status": "open"
+    },
+    {
+      "id": "E-BUG-2",
+      "title": "processSupplierPayment trusts client body.branch_id without admin check",
+      "severity": "high",
+      "route": "POST /api/analytics/suppliers/pay",
+      "spec": "Golden Rule 1; multi-branch isolation",
+      "expected": "Payment recorded under caller branchId",
+      "actual": "Caller can set branch_id in request body to redirect payment record to other branches",
+      "test": "tests/integration/ui/analytics.test.js:189",
+      "status": "open"
+    },
+    {
+      "id": "E-BUG-3",
+      "title": "GET / fails to redirect admin/superadmin to /dashboard because express.static serves index.html",
+      "severity": "medium",
+      "route": "GET /",
+      "spec": "readme.md §Authentication; ADMIN / SUPER ADMIN redirect to /dashboard",
+      "expected": "302 redirect to /dashboard for admin and super admin",
+      "actual": "express.static default index serves public/index.html with status 200",
+      "test": "tests/integration/ui/pages.test.js:110",
+      "status": "open"
+    },
+    {
+      "id": "E-BUG-4",
+      "title": "GET /dashboard.html static file has no requireAdmin check",
+      "severity": "medium",
+      "route": "GET /dashboard.html",
+      "spec": "readme.md §Authentication; admin dashboard restricted to admins",
+      "expected": "302 redirect or 403 when non-admin employee requests dashboard.html",
+      "actual": "200 OK serves admin dashboard HTML to any authenticated employee",
+      "test": "tests/integration/ui/pages.test.js:100",
+      "status": "open"
+    },
+    {
+      "id": "E-BUG-5",
+      "title": "fixArabic throws in bidi-js argument mismatch and returns raw un-reshaped text",
+      "severity": "high",
+      "route": "public/js/arabic_pdf_helpers.js:fixArabic",
+      "spec": "Golden Rule 9; Arabic text must be shaped and reordered before PDF render",
+      "expected": "Arabic characters shaped into Presentation Forms (U+FE70–U+FEFF) in visual RTL order",
+      "actual": "bidiEngine.getReorderedString throws TypeError, caught, returns raw un-reshaped string",
+      "test": "tests/integration/ui/arabic-pdf.test.js:31",
+      "status": "open"
+    },
+    {
+      "id": "E-BUG-6",
+      "title": "registered_clients in dashboard stats counts doctors only, ignoring pharmacies",
+      "severity": "medium",
+      "route": "GET /api/dashboard/stats",
+      "spec": "readme.md §Dashboard",
+      "expected": "registered_clients equals total client base (doctors + pharmacies)",
+      "actual": "SELECT COUNT(*) FROM doctors (pharmacies count omitted)",
+      "test": "tests/integration/ui/dashboard.test.js:30",
+      "status": "open"
+    },
+    {
+      "id": "E-BUG-7",
+      "title": "relation supplier_payments does not exist in database schema -> 500 on analytics payables",
+      "severity": "high",
+      "route": "GET /api/analytics/suppliers-payables, POST /api/analytics/suppliers/pay",
+      "spec": "Database schema; supplier payment tracking",
+      "expected": "200 with payables list and recorded payments",
+      "actual": "500 Internal Server Error (relation supplier_payments does not exist)",
+      "test": "tests/integration/ui/analytics.test.js:164",
+      "status": "open"
+    }
+  ],
+  "questions": [],
+  "gaps": [
+    "jsPDF is loaded via CDN in browser HTML and not installed in package.json; full Node PDF generation is verified via text-shaping core and visual tests."
+  ],
+  "notes": "Worker E test suite passed: 4 suites, 54 tests passed (including test.failing regressions for 7 bugs). 100% route coverage."
+}
