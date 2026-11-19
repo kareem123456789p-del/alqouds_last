@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "agentic-qe": {
+      "type": "local",
+      "command": [
+        "aqe-mcp"
+      ],
+      "environment": {
+        "AQE_MEMORY_PATH": ".agentic-qe/memory.db",
+        "AQE_V3_MODE": "true"
+      },
+      "enabled": true,
+      "timeout": 60000
+    }
+  }
+}

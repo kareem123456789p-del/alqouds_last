@@ -25,3 +25,15 @@ Thumbs.db
 public/js/amiri_font.js
 
 database_backup.sql
+
+# QA / test tooling
+.env.test
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+.stryker-tmp/
+reports/
+.agentic-qe/
+.claude/
+uploads/
