@@ -1,0 +1,6 @@
+{
+  "name": "alqouds-skills",
+  "displayName": "Al-Quds QE Skills",
+  "description": "Exposes the repo's Claude Code and OpenCode quality-engineering skills (86 Claude + 84 OpenCode) to the Antigravity CLI (agy). Skills are namespaced as claude-<name> and opencode-<name> to avoid collisions.",
+  "version": "1.0.0"
+}

@@ -12,33 +12,33 @@
 | Canonical ID | Worker ID | Severity | Area | Affected Route(s) | Summary | Status |
 |---|---|---|---|---|---|---|
 | **BUG-001** | — | **high** | install | `schema.test.js` | README migrations incomplete; missing `branch_id` on multiple transactional tables. | **fixed** `c859a39` |
-| **BUG-002** | `A-BUG-1` | **critical** | staff/RBAC | `POST,PUT,DELETE /api/staff` | Staff write routes lack Admin permission checks; regular employees can modify staff. | **confirmed** |
-| **BUG-003** | `C-BUG-2` | **high** | orders | `GET /api/orders/:id/details` | Query joins `orders.created_by = s.id`, but column does not exist → 500 error. | **confirmed** |
-| **BUG-004** | `C-BUG-3` | **critical** | orders/scope | `GET,PUT /api/orders/*` | Orders listing, details, dispatch, and cancel lack branch scoping (Golden Rule 1). | **confirmed** |
-| **BUG-005** | `C-BUG-4` | **high** | orders/tx | `POST /api/orders` | Early return on validation inside open transaction leaks connection `idle in transaction`. | **confirmed** |
-| **BUG-006** | `C-BUG-1` | **high** | orders | `GET /api/orders/clients` | Query selects from nonexistent `clients` table → 500 error. | **confirmed** |
-| **BUG-007** | `D-BUG-1` | **critical** | POS returns | `POST /api/retail/returns` | Destructures `original_sale_id` but never queries it; arbitrary refunds and stock minted. | **confirmed** |
-| **BUG-008** | `D-BUG-7` | **high** | imports | `POST /api/imports/:id/return` | Final return executes `UPDATE ... status = "Returned"` (double quotes in PG) → 500 syntax error. | **confirmed** |
-| **BUG-009** | `B-BUG-1` | **critical** | transfers | `POST /api/transfers` | Accepts negative item quantities, artificially increasing source warehouse stock. | **confirmed** |
-| **BUG-010** | `B-BUG-7` | **high** | products | `PUT /api/products/:id` | Partial update wipes price to 0; nonexistent product ID returns 200 success. | **confirmed** |
-| **BUG-011** | `B-BUG-11` | **high** | inventory | `PUT /api/inventory/:id` | Writes `current_stock` without validation; allows negative physical stock. | **confirmed** |
-| **BUG-012** | `E-BUG-1` | **critical** | analytics/scope | `GET /api/analytics/*` | Non-admin analysts can supply `?branch_id=2` to access foreign branch financial data. | **confirmed** |
-| **BUG-013** | `E-BUG-5` | **high** | Arabic PDF | `public/js/arabic_pdf_helpers.js` | `fixArabic()` passes incorrect arguments to `bidi-js`, catches TypeError, returns unshaped text. | **confirmed** |
-| **BUG-014** | `E-BUG-4` | **medium** | pages/RBAC | `GET /dashboard.html` | Dashboard HTML page is served to non-admin employees without `requireAdmin`. | **confirmed** |
-| **BUG-015** | `E-BUG-3` | **medium** | routing | `GET /` | `express.static` registered before `app.get('/')` serves `index.html`, bypassing dashboard redirect. | **confirmed** |
-| **BUG-016** | `C-BUG-8` | **high** | withdrawals | `POST /api/withdrawals` | Accepts negative withdrawal amounts; staff lookup is not branch-scoped. | **confirmed** |
-| **BUG-017** | `D-BUG-4` | **high** | POS/retail | `POST /api/retail/sales` | Sales attach to any active shift globally without branch scoping. | **confirmed** |
-| **BUG-018** | `D-BUG-10` | **high** | POS/retail | `/api/retail/admin/*` | Cost-fixing and zero-cost list endpoints lack Admin Only authorization gates. | **confirmed** |
-| **BUG-019** | `D-BUG-9` | **medium** | imports/scope | `POST /api/imports/:id/return` | Loads import log without branch validation and deducts stock from foreign branch. | **confirmed** |
-| **BUG-020** | `C-BUG-6` | **medium** | collections | `POST /api/collections` | Any non-`doc` prefix (e.g. `xyz-1`) defaults to pharmacy 1 instead of returning 400. | **confirmed** |
-| **BUG-021** | `D-BUG-12` | **medium** | suppliers | `DELETE /api/suppliers/:id` | Hard SQL delete crashes with 500 foreign key constraint when transactions exist. | **confirmed** |
-| **BUG-022** | `B-BUG-6` | **medium** | transfers | `PATCH /api/transfers/:id/status` | Cancelled transfers can be cancelled repeatedly without error handling. | **confirmed** |
-| **BUG-023** | `A-BUG-2` | **high** | staff/scope | `GET /api/staff` | Regular employee can list all staff members across foreign branches (Golden Rule 1). | **confirmed** |
-| **BUG-024** | `E-BUG-6` | **medium** | dashboard | `GET /api/dashboard/stats` | `registered_clients` counts doctors only, completely omitting pharmacies. | **confirmed** |
-| **BUG-025** | `B-BUG-14` | **high** | transfers | `PATCH /api/transfers/:id/status` | Receiving transfer for new batch omits `warehouse_id`, violating NOT NULL constraint (23502). | **confirmed** |
-| **BUG-026** | `E-BUG-7` | **high** | analytics | `GET,POST /api/analytics/suppliers/*` | Queries relation `supplier_payments` which does not exist in schema → 500 error. | **confirmed** |
-| **BUG-027** | `F-BUG-1` | **critical** | transfers/race | `PATCH /api/transfers/:id/status` | Double-ship race condition: concurrent `IN_TRANSIT` transitions double-deduct inventory. | **confirmed** |
-| **BUG-028** | `D-BUG-13` | **medium** | suppliers | `GET /api/suppliers/:id/history` | Inner joins `import_logs`, omitting balance rows where `import_log_id` is null. | **confirmed** |
+| **BUG-002** | `A-BUG-1` | **critical** | staff/RBAC | `POST,PUT,DELETE /api/staff` | Staff write routes lack Admin permission checks; regular employees can modify staff. | **fixed** `4c50c63` |
+| **BUG-003** | `C-BUG-2` | **high** | orders | `GET /api/orders/:id/details` | Query joins `orders.created_by = s.id`, but column does not exist → 500 error. | **fixed** `87c2d3a` |
+| **BUG-004** | `C-BUG-3` | **critical** | orders/scope | `GET,PUT /api/orders/*` | Orders listing, details, dispatch, and cancel lack branch scoping (Golden Rule 1). | **fixed** `87c2d3a` |
+| **BUG-005** | `C-BUG-4` | **high** | orders/tx | `POST /api/orders` | Early return on validation inside open transaction leaks connection `idle in transaction`. | **fixed** `87c2d3a` |
+| **BUG-006** | `C-BUG-1` | **high** | orders | `GET /api/orders/clients` | Query selects from nonexistent `clients` table → 500 error. | **fixed** `87c2d3a` |
+| **BUG-007** | `D-BUG-1` | **critical** | POS returns | `POST /api/retail/returns` | Destructures `original_sale_id` but never queries it; arbitrary refunds and stock minted. | **fixed** `996142c` |
+| **BUG-008** | `D-BUG-7` | **high** | imports | `POST /api/imports/:id/return` | Final return executes `UPDATE ... status = "Returned"` (double quotes in PG) → 500 syntax error. | **fixed** `996142c` |
+| **BUG-009** | `B-BUG-1` | **critical** | transfers | `POST /api/transfers` | Accepts negative item quantities, artificially increasing source warehouse stock. | **fixed** `4b38b19` |
+| **BUG-010** | `B-BUG-7` | **high** | products | `PUT /api/products/:id` | Partial update wipes price to 0; nonexistent product ID returns 200 success. | **fixed** `4b38b19` |
+| **BUG-011** | `B-BUG-11` | **high** | inventory | `PUT /api/inventory/:id` | Writes `current_stock` without validation; allows negative physical stock. | **fixed** `4b38b19` |
+| **BUG-012** | `E-BUG-1` | **critical** | analytics/scope | `GET /api/analytics/*` | Non-admin analysts can supply `?branch_id=2` to access foreign branch financial data. | **fixed** `17039d1` |
+| **BUG-013** | `E-BUG-5` | **high** | Arabic PDF | `public/js/arabic_pdf_helpers.js` | `fixArabic()` passes incorrect arguments to `bidi-js`, catches TypeError, returns unshaped text. | **fixed** `17039d1` |
+| **BUG-014** | `E-BUG-4` | **medium** | pages/RBAC | `GET /dashboard.html` | Dashboard HTML page is served to non-admin employees without `requireAdmin`. | **fixed** `17039d1` |
+| **BUG-015** | `E-BUG-3` | **medium** | routing | `GET /` | `express.static` registered before `app.get('/')` serves `index.html`, bypassing dashboard redirect. | **fixed** `17039d1` |
+| **BUG-016** | `C-BUG-8` | **high** | withdrawals | `POST /api/withdrawals` | Accepts negative withdrawal amounts; staff lookup is not branch-scoped. | **fixed** `87c2d3a` |
+| **BUG-017** | `D-BUG-4` | **high** | POS/retail | `POST /api/retail/sales` | Sales attach to any active shift globally without branch scoping. | **fixed** `996142c` |
+| **BUG-018** | `D-BUG-10` | **high** | POS/retail | `/api/retail/admin/*` | Cost-fixing and zero-cost list endpoints lack Admin Only authorization gates. | **fixed** `996142c` |
+| **BUG-019** | `D-BUG-9` | **medium** | imports/scope | `POST /api/imports/:id/return` | Loads import log without branch validation and deducts stock from foreign branch. | **fixed** `996142c` |
+| **BUG-020** | `C-BUG-6` | **medium** | collections | `POST /api/collections` | Any non-`doc` prefix (e.g. `xyz-1`) defaults to pharmacy 1 instead of returning 400. | **fixed** `87c2d3a` |
+| **BUG-021** | `D-BUG-12` | **medium** | suppliers | `DELETE /api/suppliers/:id` | Hard SQL delete crashes with 500 foreign key constraint when transactions exist. | **fixed** `996142c` |
+| **BUG-022** | `B-BUG-6` | **medium** | transfers | `PATCH /api/transfers/:id/status` | Cancelled transfers can be cancelled repeatedly without error handling. | **fixed** `4b38b19` |
+| **BUG-023** | `A-BUG-2` | **high** | staff/scope | `GET /api/staff` | Regular employee can list all staff members across foreign branches (Golden Rule 1). | **fixed** `4c50c63` |
+| **BUG-024** | `E-BUG-6` | **medium** | dashboard | `GET /api/dashboard/stats` | `registered_clients` counts doctors only, completely omitting pharmacies. | **fixed** `17039d1` |
+| **BUG-025** | `B-BUG-14` | **high** | transfers | `PATCH /api/transfers/:id/status` | Receiving transfer for new batch omits `warehouse_id`, violating NOT NULL constraint (23502). | **fixed** `4b38b19` |
+| **BUG-026** | `E-BUG-7` | **high** | analytics | `GET,POST /api/analytics/suppliers/*` | Queries relation `supplier_payments` which does not exist in schema → 500 error. | **fixed** `17039d1` |
+| **BUG-027** | `F-BUG-1` | **critical** | transfers/race | `PATCH /api/transfers/:id/status` | Double-ship race condition: concurrent `IN_TRANSIT` transitions double-deduct inventory. | **fixed** `4b38b19` |
+| **BUG-028** | `D-BUG-13` | **medium** | suppliers | `GET /api/suppliers/:id/history` | Inner joins `import_logs`, omitting balance rows where `import_log_id` is null. | **fixed** `996142c` |
 
 ---
 
