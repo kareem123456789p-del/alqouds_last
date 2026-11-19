@@ -129,6 +129,8 @@ const UNDOCUMENTED_BUT_REQUIRED_MIGRATIONS = [
   'migrate_missing_branch_columns.js',
   // fix(qa) BUG-026: supplier_payments table for analyticsController
   'migrate_supplier_payments.js',
+  // Decision 7B: supplier soft-delete archiving
+  'migrate_supplier_soft_delete.js',
 ];
 
 function runMigrations(list) {

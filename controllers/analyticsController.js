@@ -1,5 +1,13 @@
 const pool = require('../db');
 
+function canAccessCrossBranchAnalytics(user) {
+    if (!user) return false;
+    const role = (user.role || '').toUpperCase();
+    if (role === 'ADMIN' || role === 'SUPER ADMIN') return true;
+    const perms = user.permissions || [];
+    return (role === 'BRANCH_MANAGER' && perms.includes('can_manage_analytics'));
+}
+
 /**
  * GET /api/analytics/summary
  * 
@@ -12,18 +20,17 @@ const pool = require('../db');
 const getSummary = async (req, res, next) => {
     try {
         // ── Determine effective branch filter ──────────────────────────────
-        const role = (req.user.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
         
         let branchFilter = '';
         let branchParams = [];
         const requestedBranch = req.query.branch_id;
 
-        if (requestedBranch === 'all' && isAdmin) {
-            // Admin selected "All Branches" → no branch filter
+        if (requestedBranch === 'all' && canCrossBranch) {
+            // Admin or authorized branch manager selected "All Branches" → no branch filter
             branchFilter = '';
             branchParams = [];
-        } else if (requestedBranch && requestedBranch !== 'all' && isAdmin) {
+        } else if (requestedBranch && requestedBranch !== 'all' && canCrossBranch) {
             branchFilter = 'branch_id = $1';
             branchParams = [parseInt(requestedBranch, 10)];
         } else {
@@ -138,7 +145,7 @@ const getSummary = async (req, res, next) => {
 
         // Per-branch breakdown (for the B1/B2 sub-labels)
         const branchBreakdown = [];
-        if (requestedBranch === 'all' && isAdmin) {
+        if (requestedBranch === 'all' && canCrossBranch) {
             // Combine orders + retail_sales - returns per branch using UNION ALL
             const [brRows] = await pool.execute(
                 `SELECT b.name, GREATEST(0, COALESCE(SUM(s.amount), 0)) AS total
@@ -350,10 +357,9 @@ const getSummary = async (req, res, next) => {
  */
 const getBranches = async (req, res, next) => {
     try {
-        const role = (req.user.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
-        if (isAdmin) {
+        if (canCrossBranch) {
             const [rows] = await pool.execute(
                 "SELECT id, name FROM branches WHERE is_active = true ORDER BY id"
             );
@@ -496,8 +502,7 @@ function buildPreviousPeriodRange(period, paramOffset = 0) {
  */
 const getBranchPerformance = async (req, res, next) => {
     try {
-        const role = (req.user?.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
         const requestedBranch = req.query.branch_id;
         const period = req.query.period || 'this_month';
@@ -518,8 +523,8 @@ const getBranchPerformance = async (req, res, next) => {
         const periodEnd = rawEnd || end.toISOString().slice(0, 10);
 
         // ── Determine which branches to compare ─────────────────────────
-        // For admin, if branch_id is 'all', omitted, empty, or '0', return all active branches
-        const isAllBranches = isAdmin && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
+        // For admin or authorized manager, if branch_id is 'all', omitted, empty, or '0', return all active branches
+        const isAllBranches = canCrossBranch && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
 
         let branches = [];
         if (isAllBranches) {
@@ -528,7 +533,7 @@ const getBranchPerformance = async (req, res, next) => {
             );
             branches = brRows;
         } else {
-            const bId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
+            const bId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && canCrossBranch)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
 
@@ -691,8 +696,7 @@ const getBranchPerformance = async (req, res, next) => {
  */
 const getSalesPurchasesTimeline = async (req, res, next) => {
     try {
-        const role = (req.user?.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
         const requestedBranch = req.query.branch_id;
         const period = req.query.period || 'this_month';
@@ -712,7 +716,7 @@ const getSalesPurchasesTimeline = async (req, res, next) => {
         const periodEnd = rawEnd || end.toISOString().slice(0, 10);
 
         // ── Branch filter logic ──────────────────────────────────────────
-        const isAllBranches = isAdmin && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
+        const isAllBranches = canCrossBranch && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
 
         let branchFilterOrders = '';
         let branchFilterImports = '';
@@ -721,7 +725,7 @@ const getSalesPurchasesTimeline = async (req, res, next) => {
         let branchParams = [];
 
         if (!isAllBranches) {
-            const bId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
+            const bId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && canCrossBranch)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
             branchParams = [bId];
@@ -891,8 +895,7 @@ const getSalesPurchasesTimeline = async (req, res, next) => {
  */
 const getTopProducts = async (req, res, next) => {
     try {
-        const role = (req.user?.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
         const requestedBranch = req.query.branch_id;
         const period = req.query.period || 'this_month';
@@ -910,11 +913,11 @@ const getTopProducts = async (req, res, next) => {
         }
 
         // ── Branch isolation ────────────────────────────────────────────
-        const isAllBranches = isAdmin && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
+        const isAllBranches = canCrossBranch && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && canCrossBranch)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1064,8 +1067,7 @@ const getTopProducts = async (req, res, next) => {
  */
 const getCategoryDistribution = async (req, res, next) => {
     try {
-        const role = (req.user?.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
         const requestedBranch = req.query.branch_id;
         const period = req.query.period || 'this_month';
@@ -1081,11 +1083,11 @@ const getCategoryDistribution = async (req, res, next) => {
             startISO = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
         }
 
-        const isAllBranches = isAdmin && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
+        const isAllBranches = canCrossBranch && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && canCrossBranch)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1222,18 +1224,17 @@ const getCategoryDistribution = async (req, res, next) => {
  */
 const getCriticalAlerts = async (req, res, next) => {
     try {
-        const role = (req.user?.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
         const requestedBranch = req.query.branch_id;
         const period = req.query.period || 'this_month';
 
         // ── Branch isolation ────────────────────────────────────────────
-        const isAllBranches = isAdmin && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
+        const isAllBranches = canCrossBranch && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && canCrossBranch)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1465,17 +1466,16 @@ const getCriticalAlerts = async (req, res, next) => {
  */
 const getSuppliersPayables = async (req, res, next) => {
     try {
-        const role = (req.user?.role || '').toUpperCase();
-        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const canCrossBranch = canAccessCrossBranchAnalytics(req.user);
 
         const requestedBranch = req.query.branch_id;
 
         // ── Branch isolation ────────────────────────────────────────────
-        const isAllBranches = isAdmin && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
+        const isAllBranches = canCrossBranch && (!requestedBranch || requestedBranch === 'all' || requestedBranch === '' || requestedBranch === '0');
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && canCrossBranch)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }

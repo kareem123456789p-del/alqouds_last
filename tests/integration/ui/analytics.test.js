@@ -87,6 +87,15 @@ describe('GET /api/analytics/summary', () => {
     expect(Number(res.body.total_sales.value)).toBe(3600);
   });
 
+  test('branch manager with can_manage_analytics can query cross-branch analytics (Decision 6B)', async () => {
+    // Grant can_manage_analytics to bm1 (staff id 2)
+    await q("INSERT INTO staff_permissions (staff_id, permission_key) VALUES (2, 'can_manage_analytics') ON CONFLICT DO NOTHING");
+    const bm = await loginAs('bm1');
+    const res = await bm.get('/api/analytics/summary?period=all_time&branch_id=all');
+    expect(res.status).toBe(200);
+    expect(Number(res.body.total_sales.value)).toBe(3600);
+  });
+
   test('non-admin analyst cannot override branch filter with ?branch_id=2 (Golden Rule 1) @known-bug E-BUG-1', async () => {
     const ana = await loginAs('ana1'); // branch 1 analyst
     const res = await ana.get('/api/analytics/summary?period=all_time&branch_id=2');

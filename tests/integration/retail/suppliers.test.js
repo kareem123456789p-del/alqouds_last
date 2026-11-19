@@ -153,10 +153,25 @@ describe('DELETE /api/suppliers/:id', () => {
     expect(res.status).toBe(401);
   });
 
-  test('supplier delete with existing transactions must be rejected cleanly @known-bug D-BUG-9', async () => {
+  test('supplier delete with existing transactions archives cleanly rather than throwing 500 @known-bug D-BUG-9', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.delete('/api/suppliers/1');
-    expect([400, 401, 403, 404, 409]).toContain(res.status);
+    expect([200, 400, 409]).toContain(res.status);
+    if (res.status === 200) {
+      expect(res.body.archived).toBe(true);
+      const row = await one('SELECT is_active FROM local_suppliers WHERE id = 1');
+      expect(row.is_active).toBe(false);
+
+      // Archived supplier is filtered out by default
+      const list = await emp1.get('/api/suppliers');
+      const found = list.body.find((s) => s.id === 1);
+      expect(found).toBeUndefined();
+
+      // But returned when include_archived=true
+      const allList = await emp1.get('/api/suppliers?include_archived=true');
+      const foundArchived = allList.body.find((s) => s.id === 1);
+      expect(foundArchived).toBeDefined();
+    }
   });
 });
 

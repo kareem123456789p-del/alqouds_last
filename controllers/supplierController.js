@@ -15,9 +15,13 @@ async function nextCode() {
  */
 const getAll = async (req, res, next) => {
     try {
-        const { search = '', city = '' } = req.query;
+        const { search = '', city = '', include_archived = 'false' } = req.query;
         let sql = `SELECT * FROM local_suppliers WHERE branch_id = ?`;
         const params = [req.branchId];
+
+        if (include_archived !== 'true') {
+            sql += ` AND (is_active = TRUE OR is_active IS NULL)`;
+        }
 
         if (search) {
             sql += ` AND (company_name LIKE ? OR contact_person LIKE ?)`;
@@ -98,7 +102,15 @@ const remove = async (req, res, next) => {
         );
         const cnt = txRows[0]?.cnt ?? txRows[0]?.count ?? 0;
         if (Number(cnt) > 0) {
-            return res.status(400).json({ error: 'Cannot delete supplier with existing transactions.' });
+            // Decision 7B: Soft-delete archiving when supplier has transaction history
+            const [archiveResult] = await pool.execute(
+                'UPDATE local_suppliers SET is_active = FALSE WHERE id = ? AND branch_id = ?',
+                [req.params.id, req.branchId]
+            );
+            if (archiveResult.affectedRows === 0) {
+                return res.status(404).json({ error: 'Supplier not found' });
+            }
+            return res.json({ success: true, message: 'Supplier archived successfully', archived: true });
         }
 
         const [result] = await pool.execute('DELETE FROM local_suppliers WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]);

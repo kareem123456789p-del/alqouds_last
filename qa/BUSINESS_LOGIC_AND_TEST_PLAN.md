@@ -1,7 +1,7 @@
 # Business Logic & Comprehensive Test Plan — Al-Quds Medical ERP
 
 > **Purpose for AI Agents**: This file stores the initial planning mode, the critical business logic questions, and (once answered by the user) the exact architectural decisions to be implemented across production code and test suites.
-> **Current Status**: **Phase 2: Decisions Confirmed by User** (Ready for Execution on User Directive).
+> **Current Status**: **Phase 3: All Directives Implemented & Verified (406/406 Tests Passing)**.
 > **Instructions for Subsequent Agent**:
 > 1. Read the user's answers in Section 3 below.
 > 2. Implement the designated routes and business rules according to the selected options.
@@ -94,8 +94,8 @@ The project owner has reviewed all 7 business logic questions and selected the a
 | **3** | **Retail POS Returns** | Customer return validation policy | **Option 3A**: Strict receipt audit trail required. | **Retained as implemented**. Must match `original_sale_id`, product must exist on receipt, and `return_qty <= sold_qty - already_returned_qty`. |
 | **4** | **Stock Transfers** | Cancellation of `IN_TRANSIT` transfer | **Option 4A**: Automatic restock back to source warehouse batch. | **Retained as implemented**. Stock incremented back to original source batch in `transferController.updateStatus`. |
 | **5** | **Staff Management** | Staff creation, editing, and deletion | **Option 5A**: Strictly `ADMIN` and `SUPER ADMIN` can manage staff. | **Retained as implemented**. `requireAdmin` middleware applied across `staffRoutes.js`. |
-| **6** | **Analytics Scoping** | Cross-branch analytics visibility | **Option 6B**: Allow `BRANCH_MANAGER` read-only visibility into all branches if explicit permission (`can_manage_analytics`) is enabled. | **To Implement**: In `analyticsController.js`, permit `BRANCH_MANAGER` users with `can_manage_analytics = true` to query `?branch_id=all` or specific branches in read-only analytics views. |
-| **7** | **Supplier Lifecycle** | Deletion of suppliers with history | **Option 7B**: Soft-delete archiving (`is_active` flag). | **To Implement**: Add `is_active` column to `local_suppliers`. When `DELETE /api/suppliers/:id` is invoked on a supplier with transaction history, archive with `is_active = FALSE` instead of throwing 400/500. Filter `is_active = TRUE` on listings unless `include_archived=true`. |
+| **6** | **Analytics Scoping** | Cross-branch analytics visibility | **Option 6B**: Allow `BRANCH_MANAGER` read-only visibility into all branches if explicit permission (`can_manage_analytics`) is enabled. | ✅ **Implemented & Verified**. In `analyticsController.js`, `canAccessCrossBranchAnalytics()` allows `BRANCH_MANAGER` users with `can_manage_analytics = true` to query `?branch_id=all` or cross-branch data in read-only endpoints. |
+| **7** | **Supplier Lifecycle** | Deletion of suppliers with history | **Option 7B**: Soft-delete archiving (`is_active` flag). | ✅ **Implemented & Verified**. Migration `migrate_supplier_soft_delete.js` adds `is_active` column. `DELETE /api/suppliers/:id` archives suppliers with transaction history (`is_active = FALSE`, status 200), and `getAll` filters `is_active = TRUE` unless `include_archived=true`. |
 
 ---
 
