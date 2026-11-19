@@ -1,9 +1,23 @@
 const pool = require('../db');
 
+// ── Branch Configuration Dictionary (fallback when DB branch data is incomplete) ──
+const BRANCH_CONFIG = {
+    1: {
+        name: 'مركز القدس 1 للمستلزمات والاجهزة الطبية',
+        address: 'اسوان - النفق - عماره الدكتور عبد الحميد',
+        phones: '01114459296 - 01152950806'
+    },
+    2: {
+        name: 'مركز القدس 2 للمستلزمات والأجهزة الطبية',
+        address: 'اسوان - السيل - شارع المشرحه بجوار مستشفي اسوان الجامعي - مركز القدس 2',
+        phones: '01155675246- 01221884709- 01220212028 - 01227831253'
+    }
+};
+
 // Generate Next Order Code
 async function nextOrderCode() {
     const [[{ maxCode }]] = await pool.execute(
-        `SELECT MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)) AS maxCode FROM orders`
+        `SELECT MAX(CAST(SPLIT_PART(order_number, '-', 3) AS INTEGER)) AS "maxCode" FROM orders`
     );
     const next = (maxCode || 1000) + 1;
     const year = new Date().getFullYear();
@@ -23,7 +37,7 @@ async function resolveClient(connection, rawClientId) {
 
     if (typeClean === 'doc') {
         const [[doc]] = await connection.execute(
-            'SELECT id, name, IFNULL(credit_limit, 60000) as credit_limit, IFNULL(total_debt, 0) as total_debt FROM doctors WHERE id = ?',
+            'SELECT id, name, COALESCE(credit_limit, 60000) as credit_limit, COALESCE(total_debt, 0) as total_debt FROM doctors WHERE id = ?',
             [numId]
         );
         client = doc;
@@ -31,7 +45,7 @@ async function resolveClient(connection, rawClientId) {
         dbClientId = numId;
     } else if (typeClean === 'pharm') {
         const [[pharm]] = await connection.execute(
-            'SELECT id, name, IFNULL(credit_limit, 20000) as credit_limit, IFNULL(total_debt, 0) as total_debt FROM pharmacies WHERE id = ?',
+            'SELECT id, name, COALESCE(credit_limit, 20000) as credit_limit, COALESCE(total_debt, 0) as total_debt FROM pharmacies WHERE id = ?',
             [numId]
         );
         client = pharm;
@@ -46,21 +60,21 @@ async function resolveClient(connection, rawClientId) {
 async function updateClientDebt(connection, client, isDoctor, amount, type, orderId, branchId) {
     if (isDoctor) {
         await connection.execute(
-            'UPDATE doctors SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
+            'UPDATE doctors SET total_debt = COALESCE(total_debt, 0) + ? WHERE id = ?',
             [amount, client.id]
         );
         await connection.execute(
-            'INSERT INTO client_transactions (client_id, type, amount, reference_id) VALUES (?, ?, ?, ?)',
-            [client.id, type, amount, orderId]
+            'INSERT INTO client_transactions (client_id, type, amount, reference_id, branch_id) VALUES (?, ?, ?, ?, ?)',
+            [client.id, type, amount, orderId, branchId]
         );
     } else {
         await connection.execute(
-            'UPDATE pharmacies SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
+            'UPDATE pharmacies SET total_debt = COALESCE(total_debt, 0) + ? WHERE id = ?',
             [amount, client.id]
         );
         await connection.execute(
-            'INSERT INTO client_transactions (pharmacy_id, type, amount, reference_id) VALUES (?, ?, ?, ?)',
-            [client.id, type, amount, orderId]
+            'INSERT INTO client_transactions (pharmacy_id, type, amount, reference_id, branch_id) VALUES (?, ?, ?, ?, ?)',
+            [client.id, type, amount, orderId, branchId]
         );
     }
 }
@@ -98,23 +112,50 @@ const getClientSummary = async (req, res, next) => {
         const rawId = req.params.id;
         const [type, id] = rawId.split(/[-_]/);
 
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        let branchId = req.branchId;
+        if (isAdmin && req.query.branch_id) {
+            const parsed = parseInt(req.query.branch_id);
+            if (!isNaN(parsed) && parsed > 0) branchId = parsed;
+        }
+        if (!branchId && req.user) {
+            branchId = req.user.active_branch_id || req.user.assigned_branch_id;
+        }
+
         let clientQuery = '';
         let txQuery = '';
+        let clientParams = [id];
+        let txParams = [id];
 
         if (type === 'doc') {
-            clientQuery = 'SELECT *, location as address, IFNULL(credit_limit, 60000) as credit_limit, IFNULL(total_debt, 0) as total_debt FROM doctors WHERE id = ?';
-            txQuery = 'SELECT type, amount, date, reference_id FROM client_transactions WHERE client_id = ? ORDER BY date DESC LIMIT 5';
+            if (branchId) {
+                clientQuery = 'SELECT *, location as address, COALESCE(credit_limit, 60000) as credit_limit, COALESCE(total_debt, 0) as total_debt FROM doctors WHERE id = ? AND branch_id = ?';
+                clientParams.push(branchId);
+                txQuery = 'SELECT type, amount, date, reference_id FROM client_transactions WHERE client_id = ? AND branch_id = ? ORDER BY date DESC LIMIT 5';
+                txParams.push(branchId);
+            } else {
+                clientQuery = 'SELECT *, location as address, COALESCE(credit_limit, 60000) as credit_limit, COALESCE(total_debt, 0) as total_debt FROM doctors WHERE id = ?';
+                txQuery = 'SELECT type, amount, date, reference_id FROM client_transactions WHERE client_id = ? ORDER BY date DESC LIMIT 5';
+            }
         } else if (type === 'pharm') {
-            clientQuery = 'SELECT *, area as address, IFNULL(credit_limit, 20000) as credit_limit, IFNULL(total_debt, 0) as total_debt FROM pharmacies WHERE id = ?';
-            txQuery = 'SELECT type, amount, date, reference_id FROM client_transactions WHERE pharmacy_id = ? ORDER BY date DESC LIMIT 5';
+            if (branchId) {
+                clientQuery = 'SELECT *, area as address, COALESCE(credit_limit, 20000) as credit_limit, COALESCE(total_debt, 0) as total_debt FROM pharmacies WHERE id = ? AND branch_id = ?';
+                clientParams.push(branchId);
+                txQuery = 'SELECT type, amount, date, reference_id FROM client_transactions WHERE pharmacy_id = ? AND branch_id = ? ORDER BY date DESC LIMIT 5';
+                txParams.push(branchId);
+            } else {
+                clientQuery = 'SELECT *, area as address, COALESCE(credit_limit, 20000) as credit_limit, COALESCE(total_debt, 0) as total_debt FROM pharmacies WHERE id = ?';
+                txQuery = 'SELECT type, amount, date, reference_id FROM client_transactions WHERE pharmacy_id = ? ORDER BY date DESC LIMIT 5';
+            }
         } else {
             return res.status(400).json({ error: 'Invalid client prefix format' });
         }
 
-        const [[client]] = await pool.execute(clientQuery, [id]);
-        if (!client) return res.status(404).json({ error: 'Client not found' });
+        const [[client]] = await pool.execute(clientQuery, clientParams);
+        if (!client) return res.status(404).json({ error: 'Client not found in the active branch' });
 
-        const [transactions] = await pool.execute(txQuery, [id]);
+        const [transactions] = await pool.execute(txQuery, txParams);
 
         res.json({ client, transactions });
     } catch (err) { next(err); }
@@ -132,7 +173,7 @@ const getOrders = async (req, res, next) => {
             SELECT 
                 o.id, o.order_number, o.created_at, o.total_amount, o.status,
                 COALESCE(d.name, p.name) as client_name,
-                IF(o.client_id IS NOT NULL, o.client_id, o.pharmacy_id) as client_id
+                COALESCE(o.client_id, o.pharmacy_id) as client_id
             FROM orders o
             LEFT JOIN doctors d ON o.client_id = d.id
             LEFT JOIN pharmacies p ON o.pharmacy_id = p.id
@@ -141,6 +182,53 @@ const getOrders = async (req, res, next) => {
         `);
 
         res.json({ orders, total, limit, offset });
+    } catch (err) { next(err); }
+};
+
+// GET /api/orders/:id/details — full order with client info + items + branch + employee (for PDF export)
+const getOrderById = async (req, res, next) => {
+    try {
+        const orderId = req.params.id;
+
+        const [[order]] = await pool.execute(`
+            SELECT o.*,
+                   COALESCE(d.name, p.name) AS client_name,
+                   COALESCE(d.phone, p.phone, '') AS client_phone,
+                   COALESCE(d.email, '') AS client_email,
+                   COALESCE(d.location, p.area, '') AS client_address,
+                   b.name AS branch_db_name,
+                   b.address AS branch_db_address,
+                   b.phone AS branch_db_phones,
+                   s.name AS employee_name
+            FROM orders o
+            LEFT JOIN doctors d ON o.client_id = d.id
+            LEFT JOIN pharmacies p ON o.pharmacy_id = p.id
+            LEFT JOIN branches b ON o.branch_id = b.id
+            LEFT JOIN staff s ON o.created_by = s.id
+            WHERE o.id = ?
+        `, [orderId]);
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+
+        // Resolve branch metadata: prefer DB values, fall back to config dictionary
+        const branchId = order.branch_id || 1;
+        const fallback = BRANCH_CONFIG[branchId] || BRANCH_CONFIG[2];
+        order.branch_display_name = order.branch_db_name || fallback.name;
+        order.branch_display_address = order.branch_db_address || fallback.address;
+        order.branch_display_phones = order.branch_db_phones || fallback.phones;
+        order.employee_display_name = order.employee_name || '';
+
+        const [items] = await pool.execute(`
+            SELECT oi.*, p.name as product_name
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        `, [orderId]);
+
+        order.items = items;
+        res.json({ success: true, order });
     } catch (err) { next(err); }
 };
 
@@ -198,8 +286,8 @@ const createOrder = async (req, res, next) => {
 
         // Insert order
         const [orderResult] = await connection.execute(
-            `INSERT INTO orders (order_number, client_id, pharmacy_id, warehouse_id, expected_delivery, total_amount, status) VALUES (?, ?, ?, ?, ?, ?, 'Pending')`,
-            [orderNumber, dbClientId, dbPharmacyId, warehouse_id, expected_delivery || null, totalAmount]
+            `INSERT INTO orders (order_number, client_id, pharmacy_id, warehouse_id, expected_delivery, total_amount, status, branch_id) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?)`,
+            [orderNumber, dbClientId, dbPharmacyId, warehouse_id, expected_delivery || null, totalAmount, req.branchId || 1]
         );
         const orderId = orderResult.insertId;
 
@@ -211,8 +299,8 @@ const createOrder = async (req, res, next) => {
             const margin = parseFloat(item.profit_margin) || 0;
             const subtotal = qty * unitPrice;
             await connection.execute(
-                `INSERT INTO order_items (order_id, product_id, warehouse_id, qty, base_price, unit_price, profit_margin, subtotal, inventory_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO order_items (order_id, product_id, warehouse_id, qty, base_price, unit_price, profit_margin, subtotal, inventory_id, branch_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     orderId,
                     item.product_id,
@@ -222,7 +310,8 @@ const createOrder = async (req, res, next) => {
                     unitPrice,
                     margin,
                     subtotal,
-                    item.inventory_id || null
+                    item.inventory_id || null,
+                    req.branchId || 1
                 ]
             );
         }
@@ -299,7 +388,7 @@ const dispatchOrder = async (req, res, next) => {
         }
 
         // Mark as dispatched — debt was already added at order creation, no double-count
-        await connection.execute('UPDATE orders SET status = "Dispatched" WHERE id = ?', [orderId]);
+        await connection.execute("UPDATE orders SET status = 'Dispatched' WHERE id = ?", [orderId]);
 
         await connection.commit();
         res.json({ success: true, message: 'Order dispatched successfully.' });
@@ -369,7 +458,7 @@ const processReturn = async (req, res, next) => {
             }
 
             await connection.execute(
-                'UPDATE order_items SET returned_qty = IFNULL(returned_qty, 0) + ?, return_reason = ? WHERE id = ?',
+                'UPDATE order_items SET returned_qty = COALESCE(returned_qty, 0) + ?, return_reason = ? WHERE id = ?',
                 [returnQty, returnItem.return_reason || null, orderItem.id]
             );
         }
@@ -379,11 +468,11 @@ const processReturn = async (req, res, next) => {
             await updateClientDebt(connection, client, isDoctor, -totalReturnAmount, 'RETURN', orderId, req.branchId);
 
             const [allItems] = await connection.execute(
-                'SELECT qty, IFNULL(returned_qty, 0) as returned_qty FROM order_items WHERE order_id = ?',
+                'SELECT qty, COALESCE(returned_qty, 0) as returned_qty FROM order_items WHERE order_id = ?',
                 [orderId]
             );
             if (allItems.every(i => i.qty === i.returned_qty)) {
-                await connection.execute('UPDATE orders SET status = "Returned" WHERE id = ?', [orderId]);
+                await connection.execute("UPDATE orders SET status = 'Returned' WHERE id = ?", [orderId]);
             }
         }
 
@@ -418,7 +507,7 @@ const cancelOrder = async (req, res, next) => {
             await updateClientDebt(connection, client, isDoctor, -parseFloat(order.total_amount), 'CANCEL', orderId, req.branchId);
         }
 
-        await connection.execute('UPDATE orders SET status = "Cancelled" WHERE id = ?', [orderId]);
+        await connection.execute("UPDATE orders SET status = 'Cancelled' WHERE id = ?", [orderId]);
 
         await connection.commit();
         res.json({ success: true, message: 'Order cancelled and debt reversed successfully.' });
@@ -497,4 +586,4 @@ async function getClientHistory(req, res, next) {
     } catch (err) { next(err); }
 }
 
-module.exports = { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, getClientSummary, processReturn, cancelOrder, getClientHistory };
+module.exports = { getClients, getOrders, getOrderItems, getOrderById, getCostPrice, createOrder, dispatchOrder, getClientSummary, processReturn, cancelOrder, getClientHistory };

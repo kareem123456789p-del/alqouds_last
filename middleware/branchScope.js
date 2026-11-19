@@ -21,8 +21,12 @@ const branchScope = (req, res, next) => {
     const role = req.user.role ? req.user.role.toUpperCase() : '';
     const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
 
+    const queryBranch = req.query.branch_id ? parseInt(req.query.branch_id) : (req.headers['x-branch-id'] ? parseInt(req.headers['x-branch-id']) : null);
+
     if (isAdmin) {
-        req.branchId = req.user.active_branch_id || req.user.assigned_branch_id || 1;
+        req.branchId = (queryBranch && !isNaN(queryBranch) && queryBranch > 0)
+            ? queryBranch
+            : (req.user.active_branch_id || req.user.assigned_branch_id || 1);
     } else {
         req.branchId = req.user.assigned_branch_id;
     }

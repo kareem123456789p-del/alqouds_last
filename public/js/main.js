@@ -6,7 +6,7 @@ const dashboardCards = [
     { title: 'Transfer Console', desc: 'Inter-warehouse stock transfers', icon: 'fa-arrow-right-arrow-left', color: '#fff7ed', iconColor: '#f97316', action: "window.location.href='transfer.html'" },
     { title: 'اللوازم الطبية', desc: 'إدارة العناصر والكتالوج', icon: 'fa-box-medical', color: '#fff7ed', iconColor: '#ea580c', action: "window.location.href='products.html'" },
     { title: 'المستودع', desc: 'المواقع والتخزين', icon: 'fa-warehouse', color: '#eff6ff', iconColor: '#3b82f6', action: "window.location.href='warehouse.html'", cssClass: 'warehouse-card' },
-    { title: 'المخزون', desc: 'تتبع المستويات المباشر', icon: 'fa-chart-line', color: '#f0fdf4', iconColor: '#16a34a', action: 'promptInventoryPassword()', cssClass: 'inventory-card' },
+    { title: 'المخزون', desc: 'تتبع المستويات المباشر', icon: 'fa-chart-line', color: '#f0fdf4', iconColor: '#16a34a', action: "window.location.href='inventory.html'", cssClass: 'inventory-card' },
     { title: 'الأطباء', desc: 'قاعدة بيانات الواصفين', icon: 'fa-user-doctor', color: '#fafaf9', iconColor: '#0ea5e9', action: "window.location.href='doctors.html'", cssClass: 'doctors-card' },
 
     { title: 'الصيدلية', desc: 'وحدات الصرف', icon: 'fa-pills', color: '#fff1f2', iconColor: '#e11d48', action: "window.location.href='pharmacy_directory.html'" },
@@ -19,7 +19,7 @@ const dashboardCards = [
     { title: 'الموظفين', desc: 'إدارة الكادر', icon: 'fa-users', color: '#eff6ff', iconColor: '#2563eb', action: "window.location.href='staff_directory.html'" },
     { title: 'المسحوبات', desc: 'التتبع المالي', icon: 'fa-money-bill-wave', color: '#f0fdf4', iconColor: '#15803d', action: "window.location.href='withdrawals.html'", cssClass: 'finance-card' },
     { title: 'التحصيلات', desc: 'إدارة المدفوعات وديون العملاء', icon: 'fa-hand-holding-dollar', color: '#e0f2fe', iconColor: '#0284c7', action: "window.location.href='collections.html'", cssClass: 'collections-card' },
-    { title: 'التقارير', desc: 'التحليلات والرؤى', icon: 'fa-chart-bar', color: '#f3f4f6', iconColor: '#4b5563' },
+    { title: 'التقارير', desc: 'التحليلات والرؤى', icon: 'fa-chart-bar', color: '#f3f4f6', iconColor: '#4b5563', action: "window.location.href='analytics.html'", link: 'analytics.html', cssClass: 'analytics-card' },
 
     { title: 'الإشعارات', desc: '3 تنبيهات جديدة', icon: 'fa-bell', color: '#fff1f2', iconColor: '#dc2626' }
 ];
@@ -66,17 +66,6 @@ async function loadDashboard() {
     const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
     app.innerHTML = `
-        <!-- Welcome Banner -->
-        <div class="welcome-banner">
-            <div class="welcome-text">
-                <h2>مركز القدس لاجهزه و المستلزمات الطبيه</h2>
-                <p>لديك 12 إشعار معلق و 4 تنبيهات انخفاض مخزون اليوم.</p>
-            </div>
-            <div class="date-badge">
-                <i class="fa-regular fa-calendar"></i> ${today}
-            </div>
-        </div>
-
         <!-- Cards Grid -->
         <div class="card-grid">
             ${dashboardCards.map(card => `
@@ -90,6 +79,66 @@ async function loadDashboard() {
             `).join('')}
         </div>
     `;
+
+    // Apply RBAC to Dashboard Cards (Inventory, Collections, etc.)
+    (async function applyDashboardRBAC() {
+        // Wait for authGuard.js to populate window.__alqudsUser (up to 5 seconds)
+        let waited = 0;
+        while (!window.__alqudsUser && waited < 5000) {
+            await new Promise(r => setTimeout(r, 100));
+            waited += 100;
+        }
+
+        const user = window.__alqudsUser;
+        const role = user?.role ? user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+
+        let perms = user?.permissions || [];
+        if (typeof perms === 'string') {
+            try { perms = JSON.parse(perms); } catch(e) { perms = []; }
+        }
+
+        console.log('[ACTIVE USER PERMS]:', perms);
+        console.log('[ACTIVE USER ROLE]:', user?.role);
+
+        // 1. Inventory Card RBAC
+        const invCard = document.querySelector('.inventory-card');
+        if (invCard) {
+            const hasInventoryAccess = isAdmin || (Array.isArray(perms) && perms.includes('VIEW_INVENTORY_CARD'));
+            invCard.style.display = hasInventoryAccess ? '' : 'none';
+            console.log('[INVENTORY CARD VISIBILITY]: Set to', invCard.style.display || 'visible(default)', 'hasInventoryAccess:', hasInventoryAccess);
+        }
+
+        // 2. Collections Card RBAC
+        const colCard = document.querySelector('.collections-card');
+        if (colCard) {
+            const hasCollectionsAccess = isAdmin || (Array.isArray(perms) && perms.includes('can_manage_collections'));
+            colCard.style.display = hasCollectionsAccess ? '' : 'none';
+            console.log('[COLLECTIONS CARD VISIBILITY]: Set to', colCard.style.display || 'visible(default)', 'hasCollectionsAccess:', hasCollectionsAccess);
+        }
+
+        // 3. Any collections navigation links
+        const colLinks = document.querySelectorAll('a[href*="collections.html"], .collections-link');
+        colLinks.forEach(link => {
+            const hasCollectionsAccess = isAdmin || (Array.isArray(perms) && perms.includes('can_manage_collections'));
+            link.style.display = hasCollectionsAccess ? '' : 'none';
+        });
+
+        // 4. Analytics Card RBAC
+        const analyticsCard = document.querySelector('.analytics-card');
+        if (analyticsCard) {
+            const hasAnalyticsAccess = isAdmin || (Array.isArray(perms) && perms.includes('can_manage_analytics'));
+            analyticsCard.style.display = hasAnalyticsAccess ? '' : 'none';
+            console.log('[ANALYTICS CARD VISIBILITY]: Set to', analyticsCard.style.display || 'visible(default)', 'hasAnalyticsAccess:', hasAnalyticsAccess);
+        }
+
+        // 5. Any analytics navigation links
+        const analyticsLinks = document.querySelectorAll('a[href*="analytics.html"], .analytics-link');
+        analyticsLinks.forEach(link => {
+            const hasAnalyticsAccess = isAdmin || (Array.isArray(perms) && perms.includes('can_manage_analytics'));
+            link.style.display = hasAnalyticsAccess ? '' : 'none';
+        });
+    })();
 
     // Fetch live dashboard statistics to populate all specific cards
     loadDashboardStats();
@@ -277,71 +326,6 @@ function filterInventory(query) {
     document.getElementById('inventoryTableBody').innerHTML = generateCatalogRows(filtered);
 }
 
-/* ─── PASSWORD GATE FOR المخزون ─────────────────────────────── */
-const INVENTORY_PASSWORD = 'admin2024'; // Change this to the owner's password
-
-function promptInventoryPassword() {
-    // Remove any existing modal
-    const existing = document.getElementById('inv-pwd-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'inv-pwd-modal';
-    modal.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
-        z-index: 9999; display: flex; align-items: center; justify-content: center;
-    `;
-
-    modal.innerHTML = `
-        <div style="background: white; border-radius: 20px; padding: 2.5rem; max-width: 420px; width: 90%;
-                    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; position: relative;">
-            <div style="width: 64px; height: 64px; border-radius: 16px; background: #f0fdf4; color: #16a34a;
-                         display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 1.25rem;">
-                <i class="fa-solid fa-lock"></i>
-            </div>
-            <h2 style="font-size: 1.4rem; font-weight: 700; color: #1e293b; margin-bottom: 0.4rem;">المخزون — محمي بكلمة مرور</h2>
-            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem;">هذا القسم مخصص للمالك / الإدارة فقط.<br>الرجاء إدخال كلمة المرور للمتابعة.</p>
-            <div style="position: relative; margin-bottom: 1rem;">
-                <input type="password" id="inv-pwd-input" placeholder="أدخل كلمة المرور..."
-                    onkeydown="if(event.key==='Enter') checkInventoryPassword();"
-                    style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1.5px solid #e2e8f0;
-                           border-radius: 10px; font-size: 1rem; text-align: center; outline: none;
-                           font-family: inherit; transition: border-color 0.2s;"
-                    onfocus="this.style.borderColor='#16a34a'"
-                    onblur="this.style.borderColor='#e2e8f0'">
-            </div>
-            <p id="inv-pwd-error" style="color: #ef4444; font-size: 0.85rem; min-height: 1.2rem; margin-bottom: 0.75rem;"></p>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="document.getElementById('inv-pwd-modal').remove()"
-                    style="flex: 1; padding: 11px; border: 1px solid #e2e8f0; background: white; color: #64748b;
-                           border-radius: 9px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.9rem;">
-                    إلغاء
-                </button>
-                <button onclick="checkInventoryPassword()"
-                    style="flex: 1; padding: 11px; background: #16a34a; color: white; border: none;
-                           border-radius: 9px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.9rem;">
-                    دخول <i class="fa-solid fa-arrow-left" style="margin-right: 4px;"></i>
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    setTimeout(() => document.getElementById('inv-pwd-input')?.focus(), 100);
-}
-
-function checkInventoryPassword() {
-    const input = document.getElementById('inv-pwd-input');
-    if (input.value === INVENTORY_PASSWORD) {
-        document.getElementById('inv-pwd-modal').remove();
-        sessionStorage.setItem('inventoryAuth', 'true');
-        window.location.href = 'inventory.html';
-    } else {
-        document.getElementById('inv-pwd-modal').remove();
-        alert('Unauthorized: كلمة المرور غير صحيحة');
-    }
-}
 
 /**
  * Loads the Warehouse Stock View (المخزون) — Owner only.

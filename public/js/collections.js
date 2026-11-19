@@ -2,8 +2,148 @@ let clientChoices;
 let currentClientType = null;
 let currentClientId = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Returns the currently active branch ID.
+ * Priority: URL query param -> window.__activeBranchId -> window.__alqudsUser -> default 2
+ */
+function getActiveBranchId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramBranch = urlParams.get('branch_id');
+    if (paramBranch && !isNaN(parseInt(paramBranch))) {
+        return parseInt(paramBranch);
+    }
+    if (window.__activeBranchId) {
+        return parseInt(window.__activeBranchId);
+    }
+    if (window.__alqudsUser) {
+        return parseInt(window.__alqudsUser.active_branch_id || window.__alqudsUser.assigned_branch_id || 2);
+    }
+    return 2;
+}
+
+/**
+ * Updates the top header title and switcher to reflect the active branch.
+ */
+function updateHeaderBranchTitle(branchId, user) {
+    const titleEl = document.getElementById('page-header-title');
+    if (!titleEl) return;
+
+    const branchNames = {
+        1: 'مركز القدس 1',
+        2: 'مركز القدس 2'
+    };
+
+    let bName = branchNames[branchId];
+    if (!bName && user && user.active_branch_name) {
+        bName = user.active_branch_name;
+    }
+    if (!bName) {
+        bName = `مركز القدس ${branchId}`;
+    }
+
+    titleEl.textContent = `التحصيلات والمديونيات - ${bName}`;
+}
+
+/**
+ * Initializes branch context: verifies user session, exposes switcher for admin,
+ * and sets up header title according to the current branch.
+ */
+async function initBranchContext() {
+    try {
+        let user = window.__alqudsUser;
+        if (!user) {
+            const checkRes = await fetch('/api/auth/check');
+            if (checkRes.ok) {
+                user = await checkRes.json();
+                window.__alqudsUser = user;
+                if (!window.__activeBranchId) {
+                    window.__activeBranchId = user.active_branch_id || user.assigned_branch_id || 2;
+                }
+            }
+        }
+
+        if (user) {
+            const role = user.role ? user.role.toUpperCase() : '';
+            const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+            let perms = user.permissions || [];
+            if (typeof perms === 'string') {
+                try { perms = JSON.parse(perms); } catch(e) { perms = []; }
+            }
+            const hasCollectionsAccess = isAdmin || (Array.isArray(perms) && perms.includes('can_manage_collections'));
+            if (!hasCollectionsAccess) {
+                console.warn('[COLLECTIONS RBAC]: User lacks can_manage_collections permission. Redirecting.');
+                window.location.href = '/index.html';
+                return;
+            }
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlBranch = urlParams.get('branch_id');
+        if (urlBranch && !isNaN(parseInt(urlBranch))) {
+            window.__activeBranchId = parseInt(urlBranch);
+        }
+
+        const currentBranchId = getActiveBranchId();
+        updateHeaderBranchTitle(currentBranchId, user);
+
+        // Show branch switcher for Admin users
+        const role = user?.role ? user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        const switcherWrap = document.getElementById('branch-switcher-wrap');
+        const switcherSelect = document.getElementById('branch-select-switch');
+
+        if (isAdmin && switcherWrap && switcherSelect) {
+            switcherWrap.style.display = 'flex';
+            switcherSelect.value = String(currentBranchId);
+            switcherSelect.onchange = (e) => {
+                onBranchChange(parseInt(e.target.value));
+            };
+        }
+    } catch (err) {
+        console.error('Error initializing branch context:', err);
+    }
+}
+
+/**
+ * Handles branch switching for Admin users without requiring a full page refresh.
+ */
+async function onBranchChange(newBranchId) {
+    try {
+        window.__activeBranchId = newBranchId;
+
+        // Persist to session
+        await fetch('/api/auth/switch-branch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ branch_id: newBranchId })
+        }).catch(() => {});
+
+        // Cleanly update URL param
+        const url = new URL(window.location);
+        url.searchParams.set('branch_id', newBranchId);
+        window.history.replaceState({}, '', url);
+
+        // Update header title
+        updateHeaderBranchTitle(newBranchId, window.__alqudsUser);
+
+        // Reset customer balance card
+        resetBalanceBox();
+        document.getElementById('client-monthly-val').textContent = '0.00 د.أ';
+
+        // Re-fetch everything strictly for the new branch
+        await Promise.all([
+            loadClients(),
+            loadHistory(false),
+            loadSummary()
+        ]);
+    } catch (err) {
+        console.error('Error switching branch:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     initClientChoices();
+    await initBranchContext();
     loadClients();
     loadHistory(false);
     loadSummary();
@@ -18,7 +158,7 @@ function initClientChoices() {
         shouldSort: false,
         searchPlaceholderValue: 'البحث عن صيدلية أو دكتور...',
         noResultsText: 'لا توجد نتائج',
-        noChoicesText: 'لا يوجد عملاء متاحين'
+        noChoicesText: 'لا يوجد عملاء متاحين في هذا الفرع'
     });
 
     select.addEventListener('change', (e) => {
@@ -26,12 +166,13 @@ function initClientChoices() {
     });
 }
 
-// Load Clients into Dropdown
+// Load Clients into Dropdown strictly scoped to active branch
 async function loadClients() {
     try {
+        const branchId = getActiveBranchId();
         const [docsRes, pharmRes] = await Promise.all([
-            fetch('/api/doctors'),
-            fetch('/api/pharmacies')
+            fetch(`/api/doctors?branch_id=${branchId}`),
+            fetch(`/api/pharmacies?branch_id=${branchId}`)
         ]);
 
         let docs = [], pharms = [];
@@ -59,7 +200,9 @@ async function loadClients() {
             }
         ];
 
+        // Replace choices cleanly
         clientChoices.setChoices(groups, 'value', 'label', true);
+        clientChoices.removeActiveItems();
     } catch (err) {
         console.error("Error loading clients: ", err);
     }
@@ -74,12 +217,13 @@ async function handleClientSelection(rawValue) {
     }
 
     try {
+        const branchId = getActiveBranchId();
         const [sumRes, monthlyRes] = await Promise.all([
-            fetch(`/api/clients/${rawValue}/summary`),
-            fetch(`/api/collections/client/${rawValue}/monthly`)
+            fetch(`/api/clients/${rawValue}/summary?branch_id=${branchId}`),
+            fetch(`/api/collections/client/${rawValue}/monthly?branch_id=${branchId}`)
         ]);
 
-        if (!sumRes.ok) throw new Error("Failed to fetch client balance");
+        if (!sumRes.ok) throw new Error("Failed to fetch client balance for active branch");
         
         const data = await sumRes.json();
         const debt = parseFloat(data.client.total_debt) || 0;
@@ -110,14 +254,14 @@ function updateBalanceBox(debt, limit = 0) {
 
     if (debt > 0) {
         box.classList.add('debt-state');
-        amtEl.textContent = `${debt.toLocaleString(undefined, { minimumFractionDigits: 2 })} ד.أ`;
+        amtEl.textContent = `${debt.toLocaleString(undefined, { minimumFractionDigits: 2 })} د.أ`;
         badgeEl.textContent = 'مديونية مستحقة (Debt)';
     } else if (debt < 0) {
         box.classList.add('credit-state');
-        amtEl.textContent = `${Math.abs(debt).toLocaleString(undefined, { minimumFractionDigits: 2 })} ד.أ +`;
+        amtEl.textContent = `${Math.abs(debt).toLocaleString(undefined, { minimumFractionDigits: 2 })} د.أ +`;
         badgeEl.textContent = 'رصيد دائن (Credit)';
     } else {
-        amtEl.textContent = '0.00 ד.أ';
+        amtEl.textContent = '0.00 د.أ';
         badgeEl.textContent = 'الحساب مصفر';
         box.style.borderColor = '#e2e8f0';
         box.style.backgroundColor = '#ffffff';
@@ -167,17 +311,18 @@ function resetBalanceBox() {
     const amtEl = document.getElementById('balance-amount');
     const badgeEl = document.getElementById('balance-badge');
     box.classList.remove('debt-state', 'credit-state');
-    amtEl.textContent = '0.00 ד.أ';
+    amtEl.textContent = '0.00 د.أ';
     badgeEl.textContent = 'اختر عميل';
     document.getElementById('credit-limit-container').style.display = 'none';
 }
 
-// Save Payment
+// Save Payment strictly to active branch
 async function savePayment() {
     const clientVal = document.getElementById('client-select').value;
     const amountVal = document.getElementById('paid-amount').value;
     const methodVal = document.getElementById('payment-method').value;
     const notesVal = document.getElementById('payment-notes').value;
+    const branchId = getActiveBranchId();
     const btn = document.querySelector('.btn-save');
 
     if (!clientVal) return alert("يرجى تحديد العميل أولاً.");
@@ -194,7 +339,8 @@ async function savePayment() {
                 client_id: clientVal,
                 amount: amountVal,
                 payment_method: methodVal,
-                notes: notesVal
+                notes: notesVal,
+                branch_id: branchId
             })
         });
 
@@ -205,7 +351,7 @@ async function savePayment() {
         document.getElementById('paid-amount').value = '';
         document.getElementById('payment-notes').value = '';
         
-        // Refresh full client view automatically to update limits and totals
+        // Refresh client balance box
         handleClientSelection(clientVal);
         
         // Refresh Table and Summaries
@@ -220,20 +366,21 @@ async function savePayment() {
     }
 }
 
-// Load Paginated History
+// Load Paginated History strictly for active branch
 let historyOffset = 0;
 async function loadHistory(showMore = false) {
     if (!showMore) historyOffset = 0;
 
+    const branchId = getActiveBranchId();
     const tbody = document.getElementById('history-tbody');
     if (!showMore) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b;">جاري تحميل البيانات...</td></tr>';
 
     try {
-        const res = await fetch(`/api/collections?limit=10&offset=${historyOffset}`);
+        const res = await fetch(`/api/collections?limit=10&offset=${historyOffset}&branch_id=${branchId}`);
         const data = await res.json();
 
         if (data.payments.length === 0 && historyOffset === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b;">لا يوجد سجل مدفوعات.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b;">لا يوجد سجل مدفوعات في هذا الفرع.</td></tr>';
             return;
         }
 
@@ -282,10 +429,11 @@ async function loadHistory(showMore = false) {
     }
 }
 
-// Load Summaries
+// Load Summaries strictly for active branch
 async function loadSummary() {
     try {
-        const res = await fetch('/api/collections/summary');
+        const branchId = getActiveBranchId();
+        const res = await fetch(`/api/collections/summary?branch_id=${branchId}`);
         const data = await res.json();
         
         document.getElementById('monthly-collections-val').textContent = `${(data.monthly_collections || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} د.أ`;

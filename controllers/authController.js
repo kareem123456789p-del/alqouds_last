@@ -49,7 +49,7 @@ const login = async (req, res) => {
         sessions.set(token, {
             userId: user.id,
             registration_number: user.registration_number,
-            name: user.name, // adding name for debug logs later
+            name: user.staff_name || user.emp_name || user.full_name || user.name || user.username || user.display_name, // adding name for debug logs later
             role: user.role || 'EMPLOYEE',
             assigned_branch_id: user.branch_id,
             active_branch_id: user.branch_id,
@@ -88,6 +88,8 @@ const login = async (req, res) => {
 /**
  * GET /api/auth/check
  * Validates the current session token.
+ * Always fetches LIVE permissions and role from the database
+ * so that admin changes take effect without requiring re-login.
  */
 const checkSession = async (req, res) => {
     const token = req.cookies?.session_token;
@@ -102,6 +104,24 @@ const checkSession = async (req, res) => {
         return res.status(401).json({ authenticated: false });
     }
 
+    // Fetch LIVE permissions from DB (not stale session cache)
+    try {
+        const [permsResult] = await db.query('SELECT permission_key FROM staff_permissions WHERE staff_id = $1', [session.userId]);
+        session.permissions = permsResult.map(p => p.permission_key);
+    } catch (e) {
+        console.error('Error fetching live permissions in checkSession', e);
+    }
+
+    // Fetch LIVE role from DB (in case admin changed it)
+    try {
+        const [staffRows] = await db.query('SELECT role FROM staff WHERE id = $1', [session.userId]);
+        if (staffRows.length > 0) {
+            session.role = staffRows[0].role;
+        }
+    } catch (e) {
+        console.error('Error fetching live role in checkSession', e);
+    }
+
     // Fetch branch names
     let assigned_branch_name = 'Unknown';
     let active_branch_name = 'Unknown';
@@ -113,10 +133,13 @@ const checkSession = async (req, res) => {
         }
     } catch (e) { console.error('Error fetching branch names in checkSession', e); }
 
+    console.log(`[CHECK SESSION] User ${session.userId} (${session.name}) — role: ${session.role}, perms: ${JSON.stringify(session.permissions)}`);
+
     res.json({ 
         authenticated: true, 
         userId: session.userId,
         registration_number: session.registration_number,
+        name: session.name,
         role: session.role,
         assigned_branch_id: session.assigned_branch_id,
         active_branch_id: session.active_branch_id,
@@ -185,7 +208,8 @@ const checkPermission = (permissionKey) => {
         if (!req.user) {
             return res.status(401).json({ error: 'Unauthorized.' });
         }
-        if (req.user.role === 'ADMIN' || req.user.role === 'Super Admin' || req.user.role === 'Admin') {
+        const role = req.user.role ? req.user.role.toUpperCase() : '';
+        if (role === 'ADMIN' || role === 'SUPER ADMIN') {
             return next();
         }
         if (req.user.permissions && req.user.permissions.includes(permissionKey)) {
@@ -210,8 +234,8 @@ const requireAdmin = (req, res, next) => {
         return res.status(401).json({ error: 'Authentication required.' });
     }
 
-    const role = req.user.role;
-    const isAdmin = (role === 'ADMIN' || role === 'Admin' || role === 'Super Admin');
+    const role = req.user.role ? req.user.role.toUpperCase() : '';
+    const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
 
     if (isAdmin) {
         return next();

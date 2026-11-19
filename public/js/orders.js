@@ -481,12 +481,23 @@ async function submitOrder() {
         document.getElementById('save-order-btn').style.display = 'none';
 
         // Prepare data for export before clearing cart
+        // Resolve branch metadata for invoice from the current session context
+        const _branchConfig = {
+            1: { name: 'مركز القدس 1 للمستلزمات والاجهزة الطبية', address: 'اسوان - النفق - عماره الدكتور عبد الحميد', phones: '01114459296 - 01152950806' },
+            2: { name: 'مركز القدس 2 للمستلزمات والأجهزة الطبية', address: 'اسوان - السيل - شارع المشرحه بجوار مستشفي اسوان الجامعي - مركز القدس 2', phones: '01155675246- 01221884709- 01220212028 - 01227831253' }
+        };
+        const _currentBranchId = window.__activeBranchId || 2;
+        const _branchMeta = _branchConfig[_currentBranchId] || _branchConfig[2];
+
         const exportOrderData = {
             order_number: data.order_number || ('ORD-EXT-' + Date.now()),
             client_name: document.getElementById('client-select').options[document.getElementById('client-select').selectedIndex].text.replace(/^[⚕️🏪]\s*(Dr:\s*|Pharm:\s*)?/, ''),
             client_type: clientId.startsWith('doc') ? 'doctor' : 'pharmacy',
             date: document.getElementById('expected-delivery').value || new Date().toISOString().split('T')[0],
-            total_amount: cart.reduce((sum, item) => sum + item.subtotal, 0)
+            total_amount: cart.reduce((sum, item) => sum + item.subtotal, 0),
+            branch_display_name: _branchMeta.name,
+            branch_display_address: _branchMeta.address,
+            branch_display_phones: _branchMeta.phones
         };
         const exportCartData = [...cart];
 
@@ -900,7 +911,7 @@ async function generatePDFInvoice(order, items) {
         doc.setFont('Amiri', 'normal');
         doc.setFontSize(22);
         doc.setTextColor(41, 128, 185); // #2980b9
-        doc.text(window.fixArabic("مركز القدس 2 للمستلزمات والأجهزة الطبية"), pageWidth / 2, 14, { align: 'center', lang: 'ar' });
+        doc.text(window.fixArabic(order.branch_display_name || "مركز القدس 2 للمستلزمات والأجهزة الطبية"), pageWidth / 2, 14, { align: 'center', lang: 'ar' });
 
         doc.setFontSize(12);
         doc.setTextColor(100, 116, 139); // slate-500
@@ -962,8 +973,8 @@ async function generatePDFInvoice(order, items) {
         doc.setFont('Amiri', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(15, 23, 42); // slate-900
-        doc.text(window.fixArabic("للتواصل بنا : 01155675246- 01221884709- 01220212028 - 01227831253"), pageWidth / 2, 275, { align: "center", lang: 'ar' });
-        doc.text(window.fixArabic("العنوان : اسوان - السيل - شارع المشرحه بجوار مستشفي اسوان الجامعي - مركز القدس 2"), pageWidth / 2, 282, { align: "center", lang: 'ar' });
+        doc.text(window.fixArabic("للتواصل بنا : " + (order.branch_display_phones || "01155675246- 01221884709- 01220212028 - 01227831253")), pageWidth / 2, 275, { align: "center", lang: 'ar' });
+        doc.text(window.fixArabic("العنوان : " + (order.branch_display_address || "اسوان - السيل - شارع المشرحه بجوار مستشفي اسوان الجامعي - مركز القدس 2")), pageWidth / 2, 282, { align: "center", lang: 'ar' });
 
         doc.save(`Invoice_${order.order_number}.pdf`);
     } catch (err) {
@@ -1012,65 +1023,70 @@ function generateExcelExport(order, items) {
 // Global wrappers for fetching historical order items before exporting
 async function exportOrderPDF(identifier) {
     try {
-        // Fetch the specific order's summary by fetching with a large limit
-        // (API now returns {orders, total} shape)
-        const resList = await fetch(`/api/orders?limit=1000&offset=0`);
-        const data = await resList.json();
-        const orders = data.orders ?? data; // handle both array and paginated response
-        
-        if (!Array.isArray(orders)) {
-            return alert("Invalid response from server when fetching orders.");
+        // Use the dedicated details endpoint to fetch a single order + items
+        const res = await fetch(`/api/orders/${identifier}/details`);
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error('[FETCH ORDER PDF ERROR]:', errData);
+            return alert(errData.message || "Error fetching order details for PDF.");
         }
-        
-        const orderSummary = orders.find(o => o.id == identifier || o.order_number === identifier);
-        if (!orderSummary) return alert("Order not found.");
+        const data = await res.json();
 
-        const resItems = await fetch(`/api/orders/${orderSummary.id}/items`);
-        if (!resItems.ok) return alert("Error fetching historic order items.");
-        const items = await resItems.json();
+        if (!data.success || !data.order) {
+            console.error('[FETCH ORDER PDF ERROR]: Invalid response structure', data);
+            return alert("Invalid response from server when fetching order details.");
+        }
+
+        const order = data.order;
+        const items = order.items || [];
 
         const exportOrderData = {
-            order_number: orderSummary.order_number,
-            client_name: orderSummary.client_name.replace(/^[⚕️🏪]\s*(Dr:\s*|Pharm:\s*)?/, ''),
-            client_type: orderSummary.client_id ? (String(orderSummary.client_id).startsWith('doc') ? 'doctor' : 'pharmacy') : null,
-            date: new Date(orderSummary.created_at).toISOString().split('T')[0],
-            total_amount: orderSummary.total_amount
+            order_number: order.order_number,
+            client_name: (order.client_name || '').replace(/^[⚕️🏪]\s*(Dr:\s*|Pharm:\s*)?/, ''),
+            client_type: order.client_id ? 'doctor' : (order.pharmacy_id ? 'pharmacy' : null),
+            date: new Date(order.created_at).toISOString().split('T')[0],
+            total_amount: order.total_amount,
+            branch_display_name: order.branch_display_name,
+            branch_display_address: order.branch_display_address,
+            branch_display_phones: order.branch_display_phones,
+            employee_display_name: order.employee_display_name
         };
 
         generatePDFInvoice(exportOrderData, items);
     } catch (err) {
-        console.error("Export Error:", err);
+        console.error("[FETCH ORDER PDF ERROR]:", err);
         alert("Failed to export PDF: " + err.message);
     }
 }
 
 async function exportOrderExcel(identifier) {
     try {
-        const resList = await fetch(`/api/orders?limit=1000&offset=0`);
-        const data = await resList.json();
-        const orders = data.orders ?? data; // handle both array and paginated response
-        
-        if (!Array.isArray(orders)) {
-            return alert("Invalid response from server when fetching orders.");
+        const res = await fetch(`/api/orders/${identifier}/details`);
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error('[FETCH ORDER EXCEL ERROR]:', errData);
+            return alert(errData.message || "Error fetching order details for Excel.");
         }
-        
-        const orderSummary = orders.find(o => o.id == identifier || o.order_number === identifier);
-        if (!orderSummary) return alert("Order not found.");
+        const data = await res.json();
 
-        const resItems = await fetch(`/api/orders/${orderSummary.id}/items`);
-        if (!resItems.ok) return alert("Error fetching historic order items.");
-        const items = await resItems.json();
+        if (!data.success || !data.order) {
+            console.error('[FETCH ORDER EXCEL ERROR]: Invalid response structure', data);
+            return alert("Invalid response from server when fetching order details.");
+        }
+
+        const order = data.order;
+        const items = order.items || [];
 
         const exportOrderData = {
-            order_number: orderSummary.order_number,
-            client_name: orderSummary.client_name.replace(/^[⚕️🏪]\s*(Dr:\s*|Pharm:\s*)?/, ''),
-            date: new Date(orderSummary.created_at).toISOString().split('T')[0],
-            total_amount: orderSummary.total_amount
+            order_number: order.order_number,
+            client_name: (order.client_name || '').replace(/^[⚕️🏪]\s*(Dr:\s*|Pharm:\s*)?/, ''),
+            date: new Date(order.created_at).toISOString().split('T')[0],
+            total_amount: order.total_amount
         };
 
         generateExcelExport(exportOrderData, items);
     } catch (err) {
-        console.error("Export Error:", err);
+        console.error("[FETCH ORDER EXCEL ERROR]:", err);
         alert("Failed to export Excel: " + err.message);
     }
 }
@@ -1078,9 +1094,16 @@ async function exportOrderExcel(identifier) {
 /* ── Returns Logic ───────────────────────────── */
 let currentReturnOrderId = null;
 async function openReturnModal(orderId, orderNumber) {
+    if (document.getElementById('return-modal-overlay') && typeof window.selectInvoiceDirect === 'function') {
+        window.openReturnModal(orderNumber || orderId);
+        return;
+    }
+
     currentReturnOrderId = orderId;
-    document.getElementById('return-order-id-display').textContent = orderNumber;
-    document.getElementById('return-modal').style.display = 'flex';
+    const orderDisp = document.getElementById('return-order-id-display');
+    if (orderDisp) orderDisp.textContent = orderNumber;
+    const oldModal = document.getElementById('return-modal');
+    if (oldModal) oldModal.style.display = 'flex';
 
     const tbody = document.getElementById('return-items-tbody');
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading items...</td></tr>';
@@ -1193,16 +1216,12 @@ async function submitReturn() {
 
 async function generateReturnPDFFromTx(orderId) {
     try {
-        const orderRes = await fetch(`/api/orders?limit=1000`);
+        const orderRes = await fetch(`/api/orders/${orderId}/details`);
+        if (!orderRes.ok) throw new Error('Failed to fetch order details');
         const orderData = await orderRes.json();
-        const orders = orderData.orders || orderData;
-        if (!Array.isArray(orders)) throw new Error('Invalid response from server');
-        const order = orders.find(o => o.id == orderId);
-
-        if (!order) throw new Error('Order not found');
-
-        const itemsRes = await fetch(`/api/orders/${orderId}/items`);
-        const items = await itemsRes.json();
+        if (!orderData.success || !orderData.order) throw new Error('Invalid response from server');
+        const order = orderData.order;
+        const items = order.items || [];
 
         const returnedItems = items.filter(i => i.returned_qty > 0).map(i => ({
             name: i.product_name,
@@ -1222,7 +1241,11 @@ async function generateReturnPDFFromTx(orderId) {
             client_name: order.client_name,
             client_type: 'client',
             date: new Date().toISOString().split('T')[0],
-            total_amount: returnedItems.reduce((sum, item) => sum + item.subtotal, 0)
+            total_amount: returnedItems.reduce((sum, item) => sum + item.subtotal, 0),
+            branch_display_name: order.branch_display_name,
+            branch_display_address: order.branch_display_address,
+            branch_display_phones: order.branch_display_phones,
+            employee_display_name: order.employee_display_name
         };
 
         generateReturnPDF(exportOrderData, returnedItems);
@@ -1305,7 +1328,7 @@ async function generateReturnPDF(order, items) {
         doc.text("Thank you for your business. | Al-Quds Center", 105, 280, { align: "center" });
 
         doc.setFont('Amiri', 'normal');
-        doc.text(window.fixArabic("أسوان , عمارات العرائس , عمارة رقم 36, الشقة 11"), 105, 285, { align: "center", lang: 'ar' });
+        doc.text(window.fixArabic("العنوان : " + (order.branch_display_address || "اسوان - السيل - شارع المشرحه بجوار مستشفي اسوان الجامعي - مركز القدس 2")), 105, 285, { align: "center", lang: 'ar' });
 
         doc.save(`${order.order_number}_Return.pdf`);
 

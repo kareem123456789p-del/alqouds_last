@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getClients, getOrders, getOrderItems, getCostPrice, createOrder, dispatchOrder, processReturn, cancelOrder, getClientHistory } = require('../controllers/orderController');
+const { getClients, getOrders, getOrderItems, getOrderById, getCostPrice, createOrder, dispatchOrder, processReturn, cancelOrder, getClientHistory } = require('../controllers/orderController');
 
 // Client related
 router.get('/clients', getClients);
@@ -13,6 +13,7 @@ router.get('/product/:id/cost-price', getCostPrice);
 
 // Order CRUD
 router.get('/', getOrders);
+router.get('/:id/details', getOrderById);
 router.get('/:id/items', getOrderItems);
 router.post('/', createOrder);
 router.put('/:id/dispatch', dispatchOrder);

@@ -1,3 +1,30 @@
+// ── RBAC Permission Helpers ──────────────────────────────────────────────────
+function _getPharmacyUserPerms() {
+    const u = window.__alqudsUser;
+    if (!u) return { perms: [], isAdmin: false };
+    const role = (u.role || '').toUpperCase();
+    const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+    let perms = u.permissions || [];
+    if (typeof perms === 'string') { try { perms = JSON.parse(perms); } catch(e) { perms = []; } }
+    return { perms: Array.isArray(perms) ? perms : [], isAdmin };
+}
+function _hasPharmacyPerm(key) {
+    const { perms, isAdmin } = _getPharmacyUserPerms();
+    return isAdmin || perms.includes(key);
+}
+function waitForPharmacyUser(maxMs = 3000) {
+    return new Promise(resolve => {
+        if (window.__alqudsUser) return resolve();
+        const start = Date.now();
+        const iv = setInterval(() => {
+            if (window.__alqudsUser || Date.now() - start > maxMs) {
+                clearInterval(iv);
+                resolve();
+            }
+        }, 50);
+    });
+}
+
 /* pharmacies.js */
 
 let allPharmacies = [];
@@ -19,6 +46,12 @@ async function loadPharmacies() {
         console.log('Loaded pharmacies:', allPharmacies.length); // Debug log
         renderTable(allPharmacies);
         updateStats();
+        // Apply RBAC visibility for Add button
+        await waitForPharmacyUser();
+        const addBtn = document.getElementById('btn-add-pharmacy');
+        if (addBtn) {
+            addBtn.style.display = _hasPharmacyPerm('CREATE_PHARMACY') ? '' : 'none';
+        }
     } catch (err) {
         console.error('Network Error loading pharmacies:', err);
     }
@@ -56,12 +89,12 @@ function renderTable(data) {
                 <td><span class="${badgeClass}">${statusText}</span></td>
                 <td style="font-weight:600;">$${parseFloat(p.credit_limit || 20000).toLocaleString()}</td>
                 <td style="text-align:center; white-space:nowrap;" onclick="event.stopPropagation()">
-                    <button class="action-icon-btn edit" title="تعديل" onclick="openEditModal(${p.id})">
+                    ${_hasPharmacyPerm('EDIT_PHARMACY') ? `<button class="action-icon-btn edit" title="تعديل" onclick="openEditModal(${p.id})">
                         <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button class="action-icon-btn delete" title="حذف" onclick="deletePharmacy(${p.id}, '${p.name.replace(/'/g, "&#39;")}')">
+                    </button>` : ''}
+                    ${_hasPharmacyPerm('DELETE_PHARMACY') ? `<button class="action-icon-btn delete" title="حذف" onclick="deletePharmacy(${p.id}, '${p.name.replace(/'/g, "&#39;")}')">
                         <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    </button>` : ''}
                     <button class="action-icon-btn" title="سجل المعاملات" onclick="openClientHistoryModal('pharmacy', ${p.id}, '${p.name.replace(/'/g, "&#39;")}')" style="color:#3b82f6; border-color:#bfdbfe; background:#eff6ff;">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </button>
@@ -122,6 +155,7 @@ function createOrderForPharmacy() {
 
 // Modal actions
 function openPharmacyModal() {
+    if (!_hasPharmacyPerm('CREATE_PHARMACY')) { alert('ليس لديك صلاحية لتنفيذ هذا الإجراء'); return; }
     document.getElementById('addPharmacyForm').reset();
     document.getElementById('addPharmacyModal').classList.add('active');
 }
@@ -173,6 +207,7 @@ async function safeJson(res) {
 
 /* ── Edit Pharmacy Functions ──────────────────────── */
 function openEditModal(id) {
+    if (!_hasPharmacyPerm('EDIT_PHARMACY')) { alert('ليس لديك صلاحية لتنفيذ هذا الإجراء'); return; }
     const p = allPharmacies.find(x => Number(x.id) === Number(id));
     if (!p) return;
 
@@ -232,6 +267,7 @@ async function submitEditPharmacy(e) {
 
 /* ── Delete Pharmacy ──────────────────────────────── */
 async function deletePharmacy(id, name) {
+    if (!_hasPharmacyPerm('DELETE_PHARMACY')) { alert('ليس لديك صلاحية لتنفيذ هذا الإجراء'); return; }
     if (!confirm(`هل أنت متأكد من حذف صيدلية "${name}"؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
 
     try {

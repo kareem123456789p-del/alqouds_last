@@ -18,7 +18,7 @@ function convertPlaceholders(sql) {
  * Only appends if not already present.
  */
 function appendReturning(sql) {
-    const trimmed = sql.trimEnd().replace(/;$/, '');
+    const trimmed = sql.trim().replace(/;$/, '');
     if (/^INSERT\s/i.test(trimmed) && !/RETURNING\s/i.test(trimmed)) {
         return trimmed + ' RETURNING *';
     }

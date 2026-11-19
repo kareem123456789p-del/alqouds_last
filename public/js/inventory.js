@@ -1,8 +1,3 @@
-// ── Auth guard: must arrive from Dashboard with correct password ──────────────
-if (!sessionStorage.getItem('inventoryAuth')) {
-    window.location.href = 'index.html';
-}
-
 // ── State ─────────────────────────────────────────────────────────────────────
 let allInventory = [];  // Cache for client-side filtering
 
@@ -256,7 +251,6 @@ function openEditModal(inventoryId) {
 
 document.getElementById('editInventoryForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
-    if (!sessionStorage.getItem('inventoryAuth')) { showToast('error', 'غير مصرح لك'); return; }
 
     const inventoryId = document.getElementById('edit_inventory_id').value;
     const data = {
@@ -289,8 +283,6 @@ document.getElementById('editInventoryForm')?.addEventListener('submit', async f
 
 // ── Delete (Soft Delete) ───────────────────────────────────────────────────────
 async function deleteItem(productId, itemName) {
-    if (!sessionStorage.getItem('inventoryAuth')) { showToast('error', 'غير مصرح لك'); return; }
-
     const confirmed = confirm(`هل أنت متأكد من إلغاء تنشيط العنصر:\n"${itemName}"?\n\nسيتم إخفاء العنصر من الجرد مع الإبقاء على السجلات التاريخية.`);
     if (!confirmed) return;
 

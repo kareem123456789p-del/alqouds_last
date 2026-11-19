@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics & Reports | Al-Quds Center</title>
+    <!-- Auth Guard -->
+    <script src="js/authGuard.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/analytics.css">
+    <!-- Chart.js (Local with CDN fallback) -->
+    <script src="js/chart.umd.min.js"></script>
+    <script>
+        if (typeof Chart === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/script>');
+        }
+    </script>
+</head>
+
+<body>
+
+    <div class="analytics-shell">
+
+        <!-- ── Left Sidebar Navigation ── -->
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-truck-medical"></i></div>
+                <div>
+                    <div class="brand-text">Al-Quds Center</div>
+                    <div class="brand-sub">B2B Management Console</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-gauge-high"></i> Dashboard
+                </a>
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-boxes-stacked"></i> Inventory
+                </a>
+                <a class="nav-item" href="transfer.html">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Transfer Console
+                </a>
+                <a class="nav-item" href="suppliers.html">
+                    <i class="fa-solid fa-store"></i> Local Suppliers
+                </a>
+                <a class="nav-item" href="withdrawals.html">
+                    <i class="fa-solid fa-hand-holding-dollar"></i> Withdrawals
+                </a>
+                <a class="nav-item active" href="analytics.html">
+                    <i class="fa-solid fa-chart-bar"></i> Analytics
+                </a>
+                <a class="nav-item" href="#">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+            
+                <a class="nav-link" href="retail_sales.html" style="color:#0ea5e9; font-weight: bold;">
+                    <i class="fa-solid fa-cash-register"></i> مبيعات الجمهور (POS)
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="system-health">
+                    <div class="health-dot"></div>
+                    SYSTEM HEALTH · All nodes active
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── Main Area ── -->
+        <div class="analytics-main">
+
+            <!-- Top Bar -->
+            <header class="analytics-topbar">
+                <div class="topbar-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Quick search...">
+                    <kbd style="background:#e2e8f0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;color:#64748b;font-weight:700">⌘K</kbd>
+                </div>
+
+                <div class="filter-bar">
+                    <!-- Date Range Filter -->
+                    <div class="filter-pill">
+                        <i class="fa-regular fa-calendar"></i>
+                        <select id="filter-period">
+                            <option value="today">Today</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month" selected>This Month</option>
+                            <option value="last_month">Last Month</option>
+                            <option value="this_quarter">This Quarter</option>
+                            <option value="this_year">This Year</option>
+                            <option value="all_time">All Time</option>
+                        </select>
+                    </div>
+
+                    <!-- Branch Filter -->
+                    <div class="filter-pill">
+                        <i class="fa-solid fa-code-branch"></i>
+                        <select id="filter-branch">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <!-- Live Badge -->
+                    <div class="live-badge">
+                        <div class="live-dot"></div>
+                        <span id="live-time">Live</span>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <div class="user-chip">
+                        <div class="user-avatar" id="user-avatar">AU</div>
+                        <span id="user-display-name">Admin User</span>
+                        <span style="font-size:0.7rem;color:#9ca3af;margin-left:4px" id="user-role-badge">ADMIN</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="analytics-content">
+
+                <!-- Hub Banner -->
+                <div class="hub-banner">
+                    <div class="hub-info">
+                        <div class="hub-icon"><i class="fa-solid fa-building"></i></div>
+                        <div>
+                            <div class="hub-title" id="hub-title">Loading...</div>
+                            <div class="hub-subtitle" id="hub-subtitle">Initializing analytics engine...</div>
+                        </div>
+                        <span class="synced-badge">Telemetry Synced</span>
+                    </div>
+                    <div class="hub-actions">
+                        <button class="btn-outline" onclick="exportLedger()">
+                            <i class="fa-solid fa-download"></i> Export Ledger
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5 KPI Summary Cards -->
+                <div class="kpi-grid" id="kpi-grid">
+                    <!-- Skeleton loading cards -->
+                    <div class="kpi-card skeleton" style="min-height:160px"></div>
+                    <div class="kpi-card skeleton" style="min-height:160px"></div>
+                    <div class="kpi-card skeleton" style="min-height:160px"></div>
+                    <div class="kpi-card skeleton" style="min-height:160px"></div>
+                    <div class="kpi-card skeleton" style="min-height:160px"></div>
+                </div>
+
+                <!-- Future: Charts, Tables, etc. will go below -->
+
+                <!-- ── Chunk 2: Visual Charts Row ── -->
+                <div class="charts-row">
+
+                    <!-- Branch Performance Bar Chart -->
+                    <div class="chart-panel branch-perf-panel">
+                        <div class="chart-panel-header">
+                            <div>
+                                <div class="chart-title">
+                                    <i class="fa-solid fa-chart-column" style="color:#3b82f6"></i>
+                                    Branch Performance
+                                </div>
+                                <div class="chart-subtitle" id="branch-perf-subtitle">
+                                    Metro Central (B1) vs North Valley (B2) comparison
+                                </div>
+                            </div>
+                            <div class="chart-header-actions">
+                                <span class="chart-legend-item">
+                                    <span class="legend-dot" style="background:#3b82f6"></span> Sales
+                                </span>
+                                <span class="chart-legend-item">
+                                    <span class="legend-dot" style="background:#0f172a"></span> Profit
+                                </span>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-wrap">
+                            <canvas id="chart-branch-performance"></canvas>
+                        </div>
+                        <div class="branch-margin-footer" id="branch-margin-footer">
+                            <!-- Dynamically populated -->
+                            <div class="branch-margin-item skeleton-text" style="width:200px;height:16px"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sales vs Purchases Timeline Line Chart -->
+                    <div class="chart-panel sales-timeline-panel">
+                        <div class="chart-panel-header">
+                            <div>
+                                <div class="chart-title">
+                                    <i class="fa-solid fa-chart-line" style="color:#0ea5e9"></i>
+                                    Sales vs Purchases
+                                </div>
+                                <div class="chart-subtitle">
+                                    Operational cash-spread analysis
+                                </div>
+                            </div>
+                            <div class="chart-header-actions">
+                                <span class="chart-legend-item">
+                                    <span class="legend-dot" style="background:#3b82f6"></span> Sales
+                                </span>
+                                <span class="chart-legend-item">
+                                    <span class="legend-dot" style="background:#f97316"></span> Restock
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Net Operating Spread Callout -->
+                        <div class="spread-callout" id="spread-callout">
+                            <div class="spread-value" id="spread-value">$0.00</div>
+                            <div class="spread-label" id="spread-label">Net Operating Spread</div>
+                        </div>
+
+                        <div class="chart-canvas-wrap">
+                            <canvas id="chart-sales-purchases"></canvas>
+                        </div>
+                        <div class="timeline-footer" id="timeline-footer">
+                            <span class="timeline-stat">
+                                <span class="stat-label">Purchases restocked</span>
+                                <span class="stat-value" id="timeline-purchases-total">$0</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- / Chunk 2 -->
+
+                <!-- ── Chunk 3: Top Products & Category Distribution ── -->
+                <div class="charts-row products-category-row">
+
+                    <!-- Top Selling Products Table -->
+                    <div class="chart-panel top-products-panel">
+                        <div class="chart-panel-header">
+                            <div>
+                                <div class="chart-title">
+                                    <i class="fa-solid fa-ranking-star" style="color:#f59e0b"></i>
+                                    Top Selling Products
+                                </div>
+                                <div class="chart-subtitle" id="top-products-subtitle">
+                                    Ranked by revenue contribution this period
+                                </div>
+                            </div>
+                            <div class="chart-header-actions">
+                                <span class="top-products-total-badge" id="top-products-total-badge">
+                                    <i class="fa-solid fa-coins" style="font-size:0.6rem"></i>
+                                    <span id="top-products-total-value">$0</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Products list container -->
+                        <div class="top-products-list" id="top-products-list">
+                            <!-- Skeleton rows -->
+                            <div class="tp-row skeleton-text" style="height:36px;margin-bottom:6px"></div>
+                            <div class="tp-row skeleton-text" style="height:36px;margin-bottom:6px"></div>
+                            <div class="tp-row skeleton-text" style="height:36px;margin-bottom:6px"></div>
+                            <div class="tp-row skeleton-text" style="height:36px;margin-bottom:6px"></div>
+                            <div class="tp-row skeleton-text" style="height:36px;margin-bottom:6px"></div>
+                        </div>
+
+                        <div class="top-products-footer" id="top-products-footer">
+                            <span class="stat-label">Total Capital:</span>
+                            <span class="stat-value" id="top-products-capital">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Category Distribution Donut Chart -->
+                    <div class="chart-panel category-dist-panel">
+                        <div class="chart-panel-header">
+                            <div>
+                                <div class="chart-title">
+                                    <i class="fa-solid fa-chart-pie" style="color:#8b5cf6"></i>
+                                    Top Categories Share
+                                </div>
+                                <div class="chart-subtitle">
+                                    Volume & revenue distribution by category
+                                </div>
+                            </div>
+                            <div class="chart-header-actions">
+                                <span class="category-total-badge" id="category-total-badge">100% Available</span>
+                            </div>
+                        </div>
+
+                        <div class="category-donut-layout">
+                            <!-- Donut Chart -->
+                            <div class="donut-canvas-wrap">
+                                <canvas id="chart-category-donut"></canvas>
+                                <div class="donut-center-label">
+                                    <div class="donut-center-sub">TOTAL</div>
+                                    <div class="donut-center-value" id="donut-center-value">$0</div>
+                                </div>
+                            </div>
+                            <!-- Legend list -->
+                            <div class="category-legend-list" id="category-legend-list">
+                                <div class="skeleton-text" style="height:18px;width:150px;margin-bottom:8px"></div>
+                                <div class="skeleton-text" style="height:18px;width:130px;margin-bottom:8px"></div>
+                                <div class="skeleton-text" style="height:18px;width:140px;margin-bottom:8px"></div>
+                            </div>
+                        </div>
+
+                        <div class="category-footer" id="category-footer">
+                            <span class="stat-label">Highest Margin:</span>
+                            <span class="stat-value" id="category-highest-margin">—</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- / Chunk 3 -->
+
+                <!-- ── Chunk 4: Critical Inventory Alerts ── -->
+                <div class="critical-alerts-section" id="critical-alerts-section">
+
+                    <!-- Section Header -->
+                    <div class="alerts-section-header">
+                        <div class="alerts-header-left">
+                            <div class="alerts-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div>
+                                <div class="alerts-title">Critical Inventory Alerts</div>
+                                <div class="alerts-subtitle">Real-time surveillance on stock anomalies, depletion threats, and expiry timelines</div>
+                            </div>
+                        </div>
+                        <div class="alerts-header-badges" id="alerts-header-badges">
+                            <span class="alert-count-badge dead-stock-badge">
+                                <span class="badge-dot dead"></span>
+                                <span id="badge-dead-count">0</span> Dead Stock
+                            </span>
+                            <span class="alert-count-badge shortage-badge">
+                                <span class="badge-dot shortage"></span>
+                                <span id="badge-shortage-count">0</span> Shortages
+                            </span>
+                            <span class="alert-count-badge expiry-badge">
+                                <span class="badge-dot expiry"></span>
+                                <span id="badge-expiry-count">0</span> Expiry Risks
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 3-Column Grid -->
+                    <div class="alerts-grid">
+
+                        <!-- Column 1: Slow-Moving & Dead Stock -->
+                        <div class="alert-column dead-stock-column">
+                            <div class="alert-column-header">
+                                <div class="alert-col-title">
+                                    <i class="fa-solid fa-boxes-packing"></i>
+                                    Slow-Moving & Dead Stock
+                                </div>
+                                <span class="alert-col-tag tag-inactive">>60 Days Inactive</span>
+                            </div>
+                            <div class="alert-items-list" id="dead-stock-list">
+                                <div class="skeleton-text" style="height:70px;margin-bottom:8px"></div>
+                                <div class="skeleton-text" style="height:70px;margin-bottom:8px"></div>
+                            </div>
+                            <div class="alert-column-footer" id="dead-stock-footer">
+                                <span class="alert-footer-label">Tied Capital:</span>
+                                <span class="alert-footer-value" id="dead-stock-capital">$0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Low Stock & Shortages -->
+                        <div class="alert-column shortages-column">
+                            <div class="alert-column-header">
+                                <div class="alert-col-title">
+                                    <i class="fa-solid fa-arrow-trend-down"></i>
+                                    Low Stock & Shortages
+                                </div>
+                                <span class="alert-col-tag tag-reorder">Reorder All Low</span>
+                            </div>
+                            <div class="alert-items-list" id="shortages-list">
+                                <div class="skeleton-text" style="height:70px;margin-bottom:8px"></div>
+                                <div class="skeleton-text" style="height:70px;margin-bottom:8px"></div>
+                            </div>
+                            <div class="alert-column-footer" id="shortages-footer">
+                                <span class="alert-footer-label">Adequate Stock Item:</span>
+                                <span class="alert-footer-value" id="shortages-adequate">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Expiry Risk Alerts -->
+                        <div class="alert-column expiry-column">
+                            <div class="alert-column-header">
+                                <div class="alert-col-title">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                    Expiry Risk Alerts
+                                </div>
+                                <span class="alert-col-tag tag-fifo">FIFO Monitored</span>
+                            </div>
+                            <div class="alert-items-list" id="expiry-list">
+                                <div class="skeleton-text" style="height:80px;margin-bottom:8px"></div>
+                                <div class="skeleton-text" style="height:80px;margin-bottom:8px"></div>
+                            </div>
+                            <div class="alert-column-footer" id="expiry-footer">
+                                <span class="alert-footer-label">Audit Action:</span>
+                                <span class="alert-footer-value expiry-audit-link" id="expiry-audit-action">—</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- / Chunk 4 -->
+
+                <!-- ── Chunk 5: Suppliers & Payables Management ── -->
+                <div class="suppliers-payables-section" id="suppliers-payables-section">
+
+                    <!-- Section Header -->
+                    <div class="sp-section-header">
+                        <div class="sp-header-left">
+                            <div class="sp-icon"><i class="fa-solid fa-building-columns"></i></div>
+                            <div>
+                                <div class="sp-title">Suppliers & Payables Management</div>
+                                <div class="sp-subtitle">Commercial accounts, debt obligations, and settlement maturity schedules</div>
+                            </div>
+                        </div>
+                        <div class="sp-header-right">
+                            <div class="sp-debt-callout">
+                                <div class="sp-debt-label">Total Unsettled Debt</div>
+                                <div class="sp-debt-value" id="sp-total-debt">$0.00</div>
+                            </div>
+                            <a href="suppliers.html" class="sp-view-all-link" id="sp-view-all-link">
+                                View All Suppliers (<span id="sp-supplier-count">0</span>)
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Suppliers Table -->
+                    <div class="sp-table-wrap">
+                        <table class="sp-table">
+                            <thead>
+                                <tr>
+                                    <th class="sp-th">SUPPLIER PARTNER</th>
+                                    <th class="sp-th sp-th-num">TOTAL INVOICES</th>
+                                    <th class="sp-th sp-th-num">PAID AMOUNT</th>
+                                    <th class="sp-th sp-th-progress">SETTLEMENT PROGRESS</th>
+                                    <th class="sp-th sp-th-num">OUTSTANDING DUE</th>
+                                    <th class="sp-th sp-th-status">MATURITY / STATUS</th>
+                                    <th class="sp-th sp-th-action">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sp-table-body">
+                                <!-- Skeleton rows -->
+                                <tr><td colspan="7"><div class="skeleton-text" style="height:52px;margin:4px 0"></div></td></tr>
+                                <tr><td colspan="7"><div class="skeleton-text" style="height:52px;margin:4px 0"></div></td></tr>
+                                <tr><td colspan="7"><div class="skeleton-text" style="height:52px;margin:4px 0"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Table Footer -->
+                    <div class="sp-table-footer">
+                        <div class="sp-footer-left">
+                            <span class="sp-cycle-badge">
+                                <span class="badge-dot dead"></span>
+                                Average settlement cycle: <strong id="sp-avg-cycle">0</strong> Days (Target: &lt;30D)
+                            </span>
+                        </div>
+                        <div class="sp-footer-right">
+                            <span class="sp-footer-info" id="sp-footer-info">Displaying Top 5 of 0 Vendors</span>
+                            <button class="sp-download-btn" onclick="showToast('Aging Ledger export initiated', 'success')">
+                                <i class="fa-solid fa-download"></i> Download Aging Ledger (XLSX)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- / Chunk 5: Suppliers & Payables -->
+
+                <!-- ── Payment Modal ── -->
+                <div class="sp-modal-overlay" id="sp-payment-modal" style="display:none">
+                    <div class="sp-modal">
+                        <div class="sp-modal-header">
+                            <div class="sp-modal-title">
+                                <i class="fa-solid fa-credit-card"></i> Authorize Payment
+                            </div>
+                            <button class="sp-modal-close" id="sp-modal-close">&times;</button>
+                        </div>
+                        <div class="sp-modal-body">
+                            <div class="sp-modal-supplier-name" id="sp-modal-supplier-name">—</div>
+                            <div class="sp-modal-outstanding">
+                                Outstanding: <strong id="sp-modal-outstanding-value">$0.00</strong>
+                            </div>
+                            <div class="sp-modal-field">
+                                <label>Payment Amount</label>
+                                <input type="number" id="sp-modal-amount" min="0.01" step="0.01" placeholder="Enter amount">
+                            </div>
+                            <div class="sp-modal-field">
+                                <label>Payment Method</label>
+                                <select id="sp-modal-method">
+                                    <option value="cash">Cash</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="check">Check</option>
+                                    <option value="digital_wallet">Digital Wallet</option>
+                                </select>
+                            </div>
+                            <div class="sp-modal-field">
+                                <label>Notes (optional)</label>
+                                <textarea id="sp-modal-notes" rows="2" placeholder="Payment notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="sp-modal-footer">
+                            <button class="sp-modal-cancel-btn" id="sp-modal-cancel-btn">Cancel</button>
+                            <button class="sp-modal-pay-btn" id="sp-modal-pay-btn">
+                                <i class="fa-solid fa-check"></i> Confirm Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div><!-- /.analytics-main -->
+    </div><!-- /.analytics-shell -->
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/analytics.js"></script>
+</body>
+
+</html>

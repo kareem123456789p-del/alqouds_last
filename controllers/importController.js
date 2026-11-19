@@ -2,13 +2,51 @@ const pool = require('../db');
 
 /**
  * GET /api/imports/suppliers
- * Fetch all active local suppliers for the dropdown
+ * Fetch active local suppliers filtered by the user's branch (strict branch isolation)
  */
 const getActiveSuppliers = async (req, res, next) => {
     try {
         const [rows] = await pool.execute(
-            'SELECT id, company_name, contact_person FROM local_suppliers ORDER BY company_name'
+            'SELECT id, company_name, contact_person FROM local_suppliers WHERE branch_id = ? ORDER BY company_name',
+            [req.branchId]
         );
+        res.json(rows);
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * GET /api/imports/warehouse-stock?warehouse_id=X
+ * Fetch product stock levels for a specific warehouse within the user's branch.
+ * Returns each active product with its aggregated stock in that warehouse.
+ */
+const getWarehouseStock = async (req, res, next) => {
+    const warehouseId = req.query.warehouse_id;
+    if (!warehouseId) {
+        return res.status(400).json({ error: 'warehouse_id query parameter is required.' });
+    }
+    try {
+        const [rows] = await pool.execute(`
+            SELECT 
+                p.id,
+                p.name,
+                p.sku,
+                COALESCE(SUM(wi.current_stock), 0) AS warehouse_stock,
+                bu.name  AS base_uom_name,
+                blku.name AS bulk_uom_name,
+                p.conversion_factor
+            FROM products p
+            LEFT JOIN warehouse_inventory wi 
+                ON wi.product_id = p.id 
+               AND wi.warehouse_id = ? 
+               AND wi.branch_id = ?
+            LEFT JOIN uom bu   ON p.base_uom_id = bu.id
+            LEFT JOIN uom blku ON p.bulk_uom_id  = blku.id
+            WHERE p.is_active = 1 AND p.is_deleted = 0
+            GROUP BY p.id, p.name, p.sku, bu.name, blku.name, p.conversion_factor
+            ORDER BY p.name
+        `, [warehouseId, req.branchId]);
         res.json(rows);
     } catch (err) {
         next(err);
@@ -242,7 +280,7 @@ const processImportReturn = async (req, res, next) => {
 
             // 3. Update the import log
             await connection.execute(
-                'UPDATE import_logs SET returned_qty = IFNULL(returned_qty, 0) + ?, return_reason = ? WHERE id = ?',
+                'UPDATE import_logs SET returned_qty = COALESCE(returned_qty, 0) + ?, return_reason = ? WHERE id = ?',
                 [qty, return_reason || null, importLogId]
             );
 
@@ -272,6 +310,7 @@ const processImportReturn = async (req, res, next) => {
 
 module.exports = {
     getActiveSuppliers,
+    getWarehouseStock,
     getImports,
     createImport,
     processImportReturn

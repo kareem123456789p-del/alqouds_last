@@ -37,6 +37,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Setup event listener for warehouse change to re-fetch stock per warehouse
+    const warehouseSelect = document.getElementById('imp-warehouse');
+    if (warehouseSelect) {
+        warehouseSelect.addEventListener('change', () => {
+            const warehouseId = warehouseSelect.value;
+            if (warehouseId) {
+                loadProductsForWarehouse(warehouseId);
+            } else {
+                // No warehouse selected — load products with global stock (fallback)
+                loadProducts();
+            }
+        });
+    }
 });
 
 // Toast Notifications
@@ -61,7 +75,64 @@ function showToast(message, type = 'success') {
 
 let itemChoices;
 
-// Fetch Products
+/**
+ * Fetch products with stock scoped to a specific warehouse (branch-isolated).
+ * Called when the user selects or changes the target warehouse dropdown.
+ */
+async function loadProductsForWarehouse(warehouseId) {
+    try {
+        const res = await fetch(`/api/imports/warehouse-stock?warehouse_id=${encodeURIComponent(warehouseId)}`, {
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Failed to fetch warehouse stock: ${res.status} ${res.statusText} - ${errorText}`);
+        }
+        const products = await res.json();
+
+        const selectEl = document.getElementById('imp-item');
+        
+        if (itemChoices) {
+            itemChoices.destroy();
+        }
+
+        selectEl.innerHTML = '<option value="">اختر صنف...</option>';
+
+        products.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.sku || p.id} - ${p.name}`;
+            // Use warehouse-specific stock instead of global quantity
+            opt.dataset.stock = p.warehouse_stock || 0;
+            opt.dataset.baseUomName = p.base_uom_name || 'Piece';
+            opt.dataset.bulkUomName = p.bulk_uom_name || '';
+            opt.dataset.conversionFactor = p.conversion_factor || 1;
+            selectEl.appendChild(opt);
+        });
+
+        // Initialize Choices.js
+        itemChoices = new Choices(selectEl, {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: false,
+            searchPlaceholderValue: 'بحث عن صنف...',
+            noResultsText: 'لا توجد نتائج',
+            noChoicesText: 'لا توجد أصناف للاختيار'
+        });
+
+        // Clear current stock display since product selection was reset
+        const stockDisplay = document.getElementById('item-stock-display');
+        if (stockDisplay) stockDisplay.textContent = '';
+
+    } catch (e) {
+        console.error(e);
+        showToast('Error loading warehouse stock', 'error');
+    }
+}
+
+/**
+ * Fetch products with global stock (fallback when no warehouse is selected).
+ */
 async function loadProducts() {
     try {
         const res = await fetch('/api/products', {
@@ -132,7 +203,7 @@ async function loadWarehouses() {
     }
 }
 
-// 1. Fetch Active Suppliers
+// 1. Fetch Active Suppliers (now branch-filtered by the backend)
 async function loadSuppliers() {
     try {
         const res = await fetch('/api/imports/suppliers');
@@ -425,7 +496,13 @@ async function submitShipment() {
         updateInvoicePreview(); // clear preview
 
         await loadLogs();
-        await loadProducts();
+        // Re-fetch products for current warehouse after shipment is saved
+        const warehouseSelect = document.getElementById('imp-warehouse');
+        if (warehouseSelect && warehouseSelect.value) {
+            await loadProductsForWarehouse(warehouseSelect.value);
+        } else {
+            await loadProducts();
+        }
     } catch (error) {
         console.error(error);
         showToast(error.message, 'error');
@@ -529,7 +606,12 @@ async function submitImportReturn() {
 
         // Refresh logs and stock
         await loadLogs();
-        await loadProducts();
+        const warehouseSelect = document.getElementById('imp-warehouse');
+        if (warehouseSelect && warehouseSelect.value) {
+            await loadProductsForWarehouse(warehouseSelect.value);
+        } else {
+            await loadProducts();
+        }
 
     } catch (error) {
         console.error("Return Error:", error);

@@ -634,3 +634,12 @@ body {
 .text-muted {
     color: #94a3b8;
 }
+
+/* Profit Margin Input — prevent clipping of numbers/% sign */
+#profit-margin-input {
+    min-width: 90px;
+    width: 100%;
+    padding: 6px 10px 6px 2.5rem;
+    font-size: 14px;
+    box-sizing: border-box;
+}

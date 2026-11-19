@@ -4,6 +4,7 @@ const { login, checkSession, logout, refreshPermissions, switchBranch } = requir
 
 router.post('/login', login);
 router.get('/check', checkSession);
+router.get('/me', checkSession);
 router.post('/logout', logout);
 router.post('/refresh-permissions', refreshPermissions);
 router.post('/switch-branch', switchBranch);

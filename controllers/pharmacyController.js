@@ -6,9 +6,18 @@ const pool = require('../db');
  */
 const getPharmacies = async (req, res, next) => {
     try {
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        let branchId = req.branchId;
+        if (isAdmin && req.query.branch_id) {
+            const parsed = parseInt(req.query.branch_id);
+            if (!isNaN(parsed) && parsed > 0) branchId = parsed;
+        }
+        if (!branchId && req.user) branchId = req.user.active_branch_id || req.user.assigned_branch_id || 1;
+
         const [rows] = await pool.execute(
             'SELECT id, name, license_number, contact_person, area, phone, status, credit_limit, total_debt FROM pharmacies WHERE branch_id = ? ORDER BY name ASC',
-            [req.branchId]
+            [branchId]
         );
         res.json(rows);
     } catch (err) { next(err); }

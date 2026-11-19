@@ -31,7 +31,25 @@
                 <img src="Gemini_Generated_Image_rszlsyrszlsyrszl.png" class="header-logo" alt="Logo">
             </div>
 
-            <div class="top-actions">
+            <div class="top-actions" style="display: flex; align-items: center; gap: 0.8rem;">
+                <!-- Date Widget -->
+                <div id="top-date-badge" style="display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid #e2e8f0; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; color: #475569; font-size: 0.85rem; height: fit-content; white-space: nowrap;">
+                    <i class="fa-regular fa-calendar" style="color: #64748b;"></i>
+                    <span id="current-date-display"></span>
+                </div>
+                
+                <!-- Branch Badge -->
+                <div id="header-branch-badge" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 flex items-center gap-1.5 shadow-sm" style="display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid #e2e8f0; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; color: #475569; font-size: 0.85rem; height: fit-content; white-space: nowrap;">
+                  <i class="fa-solid fa-store" style="color: #2563eb;"></i>
+                  <span id="branch-name-display">جاري التحميل...</span>
+                </div>
+                
+                <!-- User Profile Badge -->
+                <div id="header-user-badge" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 flex items-center gap-1.5 shadow-sm" style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; color: #1e293b; font-size: 0.85rem; height: fit-content; white-space: nowrap;">
+                  <i class="fa-solid fa-user-circle" style="color: #64748b; font-size: 1rem;"></i>
+                  <span id="user-info-display">جاري التحميل...</span>
+                </div>
+
                 <!-- Admin Dashboard Link (visible only to ADMINs) -->
                 <a id="admin-dashboard-link" href="/dashboard" style="display:none; text-decoration:none; color:#2563eb; font-weight:600; font-size:0.875rem; padding:0.5rem 1rem; border:1px solid #dbeafe; border-radius:6px; background:#eff6ff; align-items:center; gap:0.4rem;">
                     <i class="fa-solid fa-gauge-high"></i> لوحة التحكم
@@ -54,14 +72,72 @@
     </main>
 
 
-    <!-- Show admin dashboard link only for ADMIN role -->
+    <!-- Script for Dynamic Header Elements -->
     <script>
-        (function showAdminLinkIfAdmin() {
+        (function initHeaderElements() {
+            // Set Date
+            const dateSpan = document.getElementById('current-date-display');
+            if (dateSpan) {
+                const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                dateSpan.textContent = today;
+            }
+
             // Wait for authGuard.js to populate window.__alqudsUser
             const check = setInterval(() => {
                 if (window.__alqudsUser) {
                     clearInterval(check);
-                    const role = window.__alqudsUser.role;
+                    const user = window.__alqudsUser;
+                    const role = user.role;
+                    
+                    // Display Branch Name
+                    const branchSpan = document.getElementById('branch-name-display');
+                    if (branchSpan) {
+                        branchSpan.textContent = user.active_branch_name || 'الفرع الرئيسي';
+                    }
+
+                    // Display User Name and Role
+                    const userBadgeText = document.getElementById('user-info-display') 
+                                       || document.querySelector('#header-user-badge span');
+                    if (userBadgeText) {
+                        const loggedInUser = window.__alqudsUser || {};
+                        
+                        // 1. Dynamic Staff Name Extraction
+                        const staffName = loggedInUser.staff_name 
+                                       || loggedInUser.emp_name 
+                                       || loggedInUser.full_name 
+                                       || loggedInUser.name 
+                                       || loggedInUser.username 
+                                       || loggedInUser.display_name 
+                                       || '';
+
+                        // 2. Role Translation & Formatting
+                        const rawRole = role || loggedInUser.job_title || loggedInUser.position || '';
+                        const roleTranslations = {
+                          'ADMIN': 'مدير النظام',
+                          'MANAGER': 'مدير الفرع',
+                          'DEPUTY_MANAGER': 'نائب مدير',
+                          'EMPLOYEE': 'موظف',
+                          'ACCOUNTANT': 'محاسب',
+                          'STAFF': 'موظف'
+                        };
+                        const formattedRole = roleTranslations[rawRole] || rawRole;
+
+                        // 3. Construct Final Display Text
+                        let displayText = '';
+                        if (staffName && formattedRole) {
+                          displayText = `${staffName} - ${formattedRole}`;
+                        } else if (staffName) {
+                          displayText = staffName;
+                        } else if (formattedRole) {
+                          displayText = formattedRole;
+                        } else {
+                          displayText = 'مستخدم';
+                        }
+
+                        userBadgeText.textContent = displayText;
+                    }
+
+                    // Show admin dashboard link only for ADMIN role
                     const isAdmin = (role === 'ADMIN' || role === 'Admin' || role === 'Super Admin');
                     if (isAdmin) {
                         const link = document.getElementById('admin-dashboard-link');
@@ -74,7 +150,7 @@
         })();
     </script>
 
-    <script src="js/main.js?v=1003"></script>
+    <script src="js/main.js?v=1004"></script>
 </body>
 
 </html>

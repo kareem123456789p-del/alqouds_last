@@ -1,3 +1,30 @@
+// ── RBAC Permission Helpers ──────────────────────────────────────────────────
+function _getDoctorUserPerms() {
+    const u = window.__alqudsUser;
+    if (!u) return { perms: [], isAdmin: false };
+    const role = (u.role || '').toUpperCase();
+    const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+    let perms = u.permissions || [];
+    if (typeof perms === 'string') { try { perms = JSON.parse(perms); } catch(e) { perms = []; } }
+    return { perms: Array.isArray(perms) ? perms : [], isAdmin };
+}
+function _hasDoctorPerm(key) {
+    const { perms, isAdmin } = _getDoctorUserPerms();
+    return isAdmin || perms.includes(key);
+}
+function waitForDoctorUser(maxMs = 3000) {
+    return new Promise(resolve => {
+        if (window.__alqudsUser) return resolve();
+        const start = Date.now();
+        const iv = setInterval(() => {
+            if (window.__alqudsUser || Date.now() - start > maxMs) {
+                clearInterval(iv);
+                resolve();
+            }
+        }, 50);
+    });
+}
+
 /**
  * Standalone Script for Doctor Directory page (doctors.html)
  */
@@ -28,6 +55,13 @@ async function loadDoctors() {
 
         renderDoctorsList(doctors);
 
+        // Apply RBAC visibility after rendering
+        await waitForDoctorUser();
+        const addBtn = document.getElementById('btn-add-doctor');
+        if (addBtn) {
+            addBtn.style.display = _hasDoctorPerm('CREATE_DOCTOR') ? '' : 'none';
+        }
+
     } catch (error) {
         console.error('Error loading doctors:', error);
         app.innerHTML = `<p class="error">Failed to load data: ${error.message}</p>`;
@@ -48,7 +82,7 @@ function renderDoctorsList(doctorsList) {
                     <h1 style="font-size: 1.8rem; color: #1e293b; font-weight: 700; margin-bottom: 8px;">Doctor Directory</h1>
                     <p style="color: #64748b; font-size: 0.95rem;">Manage and view all medical practitioners at Al-Quds Center</p>
                 </div>
-                <button class="btn-primary" onclick="openAddDoctorModal()" style="font-size: 0.95rem;">
+                <button class="btn-primary" id="btn-add-doctor" onclick="openAddDoctorModal()" style="font-size: 0.95rem; display: none;">
                     <i class="fa-solid fa-user-plus"></i> Add New Doctor
                 </button>
             </div>
@@ -125,15 +159,15 @@ function generateDoctorsCardsHTML(doctorsList) {
         return `
             <div class="doctor-card" id="doc-card-${doc.id}">
                 <div class="doc-card-actions">
-                    <button class="doc-action-btn edit" title="Edit Doctor" onclick="openEditDoctorModal(${doc.id})">
+                    ${_hasDoctorPerm('EDIT_DOCTOR') ? `<button class="doc-action-btn edit" title="Edit Doctor" onclick="openEditDoctorModal(${doc.id})">
                         <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button class="doc-action-btn delete" title="Delete Doctor" onclick="deleteDoctorById(${doc.id}, '${docName.replace(/'/g, "\\'")}')">  
+                    </button>` : ''}
+                    ${_hasDoctorPerm('DELETE_DOCTOR') ? `<button class="doc-action-btn delete" title="Delete Doctor" onclick="deleteDoctorById(${doc.id}, '${docName.replace(/'/g, "\\\\'")}')">
                         <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    </button>` : ''}
                     <button class="doc-action-btn" title="Transaction History"
                         style="color:#3b82f6;border-color:#bfdbfe;background:#eff6ff;"
-                        onclick="openClientHistoryModal('doctor', ${doc.id}, '${docName.replace(/'/g, "\\'")}')">  
+                        onclick="openClientHistoryModal('doctor', ${doc.id}, '${docName.replace(/'/g, "\\\\'")}')">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </button>
                 </div>
@@ -149,7 +183,7 @@ function generateDoctorsCardsHTML(doctorsList) {
                     <i class="fa-solid fa-phone" style="font-size: 0.8rem;"></i>
                     <span dir="ltr">${doc.phone || '+970 599-123-456'}</span>
                 </div>
-                <button class="btn-outline" onclick="showDoctorProfile(${doc.id})">View Profile</button>
+                <button class="btn-outline" onclick="openClientHistoryModal('doctor', ${doc.id}, '${docName.replace(/'/g, "\\\\'")}')">View Profile</button>
             </div>
         `;
     }).join('');
@@ -326,6 +360,7 @@ function closeDoctorProfile() {
  * Modals and CRUD
  */
 function openAddDoctorModal() {
+    if (!_hasDoctorPerm('CREATE_DOCTOR')) { alert('ليس لديك صلاحية لتنفيذ هذا الإجراء'); return; }
     const modal = document.getElementById('addDoctorModal');
     modal.style.display = 'flex';
     document.getElementById('addDoctorForm').reset();
@@ -376,6 +411,7 @@ async function submitAddDoctor(event) {
 }
 
 async function deleteDoctorById(id, name) {
+    if (!_hasDoctorPerm('DELETE_DOCTOR')) { alert('ليس لديك صلاحية لتنفيذ هذا الإجراء'); return; }
     const confirmed = confirm(`Are you sure you want to permanently delete ${name}?\n\nThis action cannot be undone and will remove this doctor from all order dropdowns.`);
     if (!confirmed) return;
 
@@ -409,6 +445,7 @@ async function deleteDoctorById(id, name) {
 }
 
 function openEditDoctorModal(id) {
+    if (!_hasDoctorPerm('EDIT_DOCTOR')) { alert('ليس لديك صلاحية لتنفيذ هذا الإجراء'); return; }
     const doc = window.currentDoctors?.find(d => d.id == id);
     if (!doc) return alert('Doctor data not found. Please refresh.');
 

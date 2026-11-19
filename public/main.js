@@ -23,7 +23,7 @@ const dashboardCards = [
     },
     { title: 'الموظفين', desc: 'إدارة الكادر', icon: 'fa-users', color: '#eff6ff', iconColor: '#2563eb' },
     { title: 'المسحوبات', desc: 'التتبع المالي', icon: 'fa-money-bill-wave', color: '#f0fdf4', iconColor: '#15803d', link: 'withdrawals.html', dynamicCountId: 'card-wd-total' },
-    { title: 'التقارير', desc: 'التحليلات والرؤى', icon: 'fa-chart-bar', color: '#f3f4f6', iconColor: '#4b5563' },
+    { title: 'التقارير', desc: 'التحليلات والرؤى', icon: 'fa-chart-bar', color: '#f3f4f6', iconColor: '#4b5563', link: 'analytics.html', action: "window.location.href='analytics.html'" },
 
     { title: 'الإشعارات', desc: '3 تنبيهات جديدة', icon: 'fa-bell', color: '#fff1f2', iconColor: '#dc2626' }
 ];

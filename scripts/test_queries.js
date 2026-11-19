@@ -17,7 +17,7 @@ async function testQuery() {
         const [disp] = await db.query("SELECT SUM(total_amount) as total FROM orders WHERE status = 'Dispatched'");
         console.log("Dispatched:", disp);
 
-        const [inv] = await db.query("SELECT IFNULL(SUM(w.current_stock * p.price), 0) as total_value, IFNULL(SUM(w.current_stock), 0) as total_items FROM warehouse_inventory w JOIN products p ON w.product_id = p.id");
+        const [inv] = await db.query("SELECT COALESCE(SUM(w.current_stock * p.price), 0) as total_value, COALESCE(SUM(w.current_stock), 0) as total_items FROM warehouse_inventory w JOIN products p ON w.product_id = p.id");
         console.log("Inventory:", inv);
 
         const [docs] = await db.query("SELECT COUNT(*) as count FROM doctors");

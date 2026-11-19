@@ -47,11 +47,24 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Step 1: Load Warehouses ──────────────────────────
 async function loadWarehouses() {
     try {
-        const res = await fetch('/api/transfer/warehouses');
+        const res = await fetch('/api/transfers/warehouses', {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server did not return JSON format');
+        }
+
         const data = await res.json();
-        window._allWarehouses = data; // cache for reactive dest filtering
-        renderWarehouseCards(data);
-        populateDestDropdown(data);
+        const warehouses = Array.isArray(data) ? data : (data.warehouses || data.data || []);
+        window._allWarehouses = warehouses; // cache for reactive dest filtering
+        renderWarehouseCards(warehouses);
+        populateDestDropdown(warehouses);
     } catch (err) {
         showToast('Failed to load warehouses. Is the server running?', 'error');
         warehouseGrid.innerHTML = `<p style="color:#ef4444;font-size:0.875rem">Error: ${err.message}</p>`;
@@ -123,7 +136,19 @@ async function selectWarehouse(warehouseId, warehouseName) {
     tableInfo.textContent = 'Loading…';
 
     try {
-        const res = await fetch(`/api/transfer/products/${warehouseId}`);
+        const res = await fetch(`/api/transfers/products/${warehouseId}`, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server did not return JSON format');
+        }
+
         allProducts = await res.json();
         renderItemsPage(currentPage);
     } catch (err) {
@@ -311,9 +336,9 @@ async function confirmTransfer() {
     btnConfirm.innerHTML = '<div class="spinner"></div> Processing…';
 
     try {
-        const res = await fetch('/api/transfer', {
+        const res = await fetch('/api/transfers', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -328,10 +353,11 @@ async function confirmTransfer() {
         resetForm();
         await selectWarehouse(reloadId, reloadName);
         // Also refresh warehouse cards to reflect updated fill %
-        const whRes = await fetch('/api/transfer/warehouses');
+        const whRes = await fetch('/api/transfers/warehouses');
         const whData = await whRes.json();
-        window._allWarehouses = whData;
-        renderWarehouseCards(whData);
+        const whList = Array.isArray(whData) ? whData : (whData.warehouses || whData.data || []);
+        window._allWarehouses = whList;
+        renderWarehouseCards(whList);
         // Re-highlight the active source card
         const card = document.getElementById(`wh-card-${reloadId}`);
         if (card) card.classList.add('selected');

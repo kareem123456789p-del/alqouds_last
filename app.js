@@ -99,6 +99,8 @@ const staffRoutes = require('./routes/staffRoutes');
 const withdrawalRoutes = require('./routes/withdrawalRoutes');
 const collectionRoutes = require('./routes/collectionRoutes');
 const retailRoutes = require('./routes/retailRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const returnsRoutes = require('./routes/returnsRoutes');
 
 // استخدام المسارات
 app.use('/api/products', productRoutes);
@@ -115,7 +117,18 @@ app.use('/api/pharmacies', pharmacyRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/collections', collectionRoutes);
+const collectionController = require('./controllers/collectionController');
+const { checkPermission } = require('./controllers/authController');
+app.get('/api/customers/debt', checkPermission('can_manage_collections'), collectionController.getCustomerDebts);
+app.get('/api/customers/debts', checkPermission('can_manage_collections'), collectionController.getCustomerDebts);
 app.use('/api/retail', retailRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/returns', returnsRoutes);
+
+// POS URL alias
+app.get(['/pos', '/pos.html'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'retail_sales.html'));
+});
 
 const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);

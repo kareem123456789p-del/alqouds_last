@@ -21,8 +21,17 @@
     <div class="app-layout">
         <!-- TOP NAVBAR -->
         <header class="global-header">
-            <div class="header-content">
-                <div class="header-title">التحصيلات والمديونيات - مركز القدس 2</div>
+            <div class="header-content" style="display: flex; align-items: center; gap: 16px;">
+                <div class="header-title" id="page-header-title">التحصيلات والمديونيات - مركز القدس</div>
+                <div id="branch-switcher-wrap" style="display: none; align-items: center; gap: 8px;">
+                    <label for="branch-select-switch" style="font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600;">
+                        <i class="fa-solid fa-code-branch"></i> الفرع:
+                    </label>
+                    <select id="branch-select-switch" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; padding: 4px 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; outline: none;">
+                        <option value="1" style="color: #1e293b;">مركز القدس 1</option>
+                        <option value="2" style="color: #1e293b;">مركز القدس 2</option>
+                    </select>
+                </div>
             </div>
             <a href="index.html" class="home-btn">
                 <i class="fa-solid fa-house"></i> العودة للوحة التحكم

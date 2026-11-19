@@ -4,6 +4,7 @@ const importController = require('../controllers/importController');
 const upload = require('../config/multer');
 
 router.get('/suppliers', importController.getActiveSuppliers);
+router.get('/warehouse-stock', importController.getWarehouseStock);
 router.get('/', importController.getImports);
 // invoiceImage is the field name used in the FormData from the frontend
 router.post('/', upload.single('invoiceImage'), importController.createImport);

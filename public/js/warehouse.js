@@ -12,13 +12,79 @@ let currentWarehouseId = '';        // '' = all
 let showAllItems = false;
 let searchOpen = false;
 
+// ── Wait for Auth Guard ──────────────────────────────
+function waitForUser(maxMs = 3000) {
+    return new Promise(resolve => {
+        if (window.__alqudsUser) return resolve();
+        const start = Date.now();
+        const iv = setInterval(() => {
+            if (window.__alqudsUser || Date.now() - start > maxMs) {
+                clearInterval(iv);
+                resolve();
+            }
+        }, 50);
+    });
+}
+
+// ── RBAC Permission Helpers ───────────────────────────
+function _getUserPerms() {
+    const u = window.__alqudsUser;
+    if (!u) return { perms: [], isAdmin: false };
+    const role = (u.role || '').toUpperCase();
+    const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+    const perms = Array.isArray(u.permissions) ? u.permissions : [];
+    return { perms, isAdmin };
+}
+function _hasPerm(key) {
+    const { perms, isAdmin } = _getUserPerms();
+    return isAdmin || perms.includes(key);
+}
+
+function applyWarehousePermissions() {
+    const { isAdmin } = _getUserPerms();
+
+    // 1. Add Warehouse button
+    const addBtn = document.getElementById('btn-add-warehouse');
+    if (addBtn && !_hasPerm('MANAGE_WAREHOUSES_ADD')) addBtn.style.display = 'none';
+
+    // 2. Download Audit button
+    const dlBtn = document.getElementById('btn-download-audit');
+    if (dlBtn && !_hasPerm('DOWNLOAD_INVENTORY_AUDIT')) dlBtn.style.display = 'none';
+
+    // 3. Print Report button
+    const printBtn = document.getElementById('btn-print-report');
+    if (printBtn && !_hasPerm('PRINT_OFFICIAL_DECLARATION')) printBtn.style.display = 'none';
+
+    // 4. Hide price/value columns if no VIEW_STOCK_QUANTITY_AND_PRICES
+    if (!_hasPerm('VIEW_STOCK_QUANTITY_AND_PRICES')) {
+        document.querySelectorAll('.col-price').forEach(el => el.style.display = 'none');
+        // Update grid template for inventory header (remove 2 price columns)
+        const invHead = document.querySelector('.inv-list-head');
+        if (invHead) invHead.style.gridTemplateColumns = '2.5fr 1fr 1fr';
+    }
+
+    // 5. Hide edit/delete buttons on warehouse cards
+    if (!_hasPerm('MANAGE_WAREHOUSES_EDIT')) {
+        document.querySelectorAll('.wh-card-btn.edit').forEach(el => el.style.display = 'none');
+    }
+    if (!_hasPerm('MANAGE_WAREHOUSES_DELETE')) {
+        document.querySelectorAll('.wh-card-btn.del').forEach(el => el.style.display = 'none');
+    }
+}
+
 // ── Bootstrap ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for authGuard to populate window.__alqudsUser
+    await waitForUser();
+
     await Promise.all([
         loadStats(),
         loadWarehouses(),
         loadMovements()
     ]);
+
+    // Apply RBAC after content is rendered
+    applyWarehousePermissions();
     
     // ── Master-Mirror Sync: Auto-refresh when inventory.html deletes a product ──
     if (window.BroadcastChannel) {
@@ -41,23 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// ── Stats ──────────────────────────────────────────────
+// ── Stats (cards removed from UI per RBAC cleanup) ──────
 async function loadStats() {
-    try {
-        const res = await fetch('/api/warehouse/stats');
-        const data = await res.json();
-
-        document.getElementById('stat-warehouses').textContent = data.active_warehouses ?? '—';
-        const val = parseFloat(data.total_inventory_value || 0);
-        document.getElementById('stat-value').textContent =
-            '$' + val.toLocaleString('en-US', { maximumFractionDigits: 0 });
-        document.getElementById('stat-products').textContent = data.product_lines ?? '—';
-    } catch (e) {
-        console.warn('Stats load failed:', e);
-        document.getElementById('stat-warehouses').textContent = '3';
-        document.getElementById('stat-value').textContent = '$125,400';
-        document.getElementById('stat-products').textContent = '8';
-    }
+    // Stats KPI cards removed from warehouse.html - no-op
+    return;
 }
 
 // ── Warehouses / Cards / Tabs ──────────────────────────
@@ -305,7 +358,9 @@ function renderInventoryRows(items) {
         const sixMonthsFromNow = new Date(now.getTime() + 180 * 86400000); // ~6 months
 
         let batchesHtml = '<div class="batches-container" style="display:none; padding: 10px 15px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 0.85rem;">';
-        batchesHtml += '<div style="display:grid; grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr; font-weight: 600; color: #64748b; margin-bottom: 5px;"><span>Batch/Item</span><span>Qty</span><span>Unit Price</span><span>Total</span><span>Expiry/Status</span></div>';
+        const _hidePrice = !_hasPerm('VIEW_STOCK_QUANTITY_AND_PRICES');
+        const _batchGridCols = _hidePrice ? '2.5fr 1fr 1fr' : '2.5fr 1fr 1fr 1fr 1fr';
+        batchesHtml += `<div style="display:grid; grid-template-columns: ${_batchGridCols}; font-weight: 600; color: #64748b; margin-bottom: 5px;"><span>Batch/Item</span><span>Qty</span>${_hidePrice ? '' : '<span class="col-price">Unit Price</span><span class="col-price">Total</span>'}<span>Expiry/Status</span></div>`;
 
         group.batches.forEach(b => {
             let statusHtml = '<span style="color:#10b981;">Good</span>';
@@ -328,11 +383,11 @@ function renderInventoryRows(items) {
             const batchLabel = b.batch_number ? `Batch #${escHtml(b.batch_number)}` : 'No Batch Info';
 
             batchesHtml += `
-            <div style="display:grid; grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr; padding: 6px 0; border-bottom: 1px solid #e2e8f0; align-items: center;">
+            <div style="display:grid; grid-template-columns: ${_batchGridCols}; padding: 6px 0; border-bottom: 1px solid #e2e8f0; align-items: center;">
                 <span>${escHtml(batchLabel)}</span>
                 <span>${typeof formatUoM === 'function' ? formatUoM(bQty, b.base_uom_name, b.bulk_uom_name, b.conversion_factor) : bQty.toLocaleString() + ' units'}</span>
-                <span style="color:#374151; font-weight:600;">ج.م ${parseFloat(b.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                <span style="font-weight:700; color:#059669;">ج.م ${(parseFloat(b.unit_price || 0) * bQty).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                ${_hidePrice ? '' : `<span class="col-price" style="color:#374151; font-weight:600;">ج.م ${parseFloat(b.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`}
+                ${_hidePrice ? '' : `<span class="col-price" style="font-weight:700; color:#059669;">ج.م ${(parseFloat(b.unit_price || 0) * bQty).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`}
                 <div style="display:flex; flex-direction:column; font-size:0.75rem;"><span>${expFormatted}</span>${statusHtml}</div>
             </div>`;
         });
@@ -347,7 +402,7 @@ function renderInventoryRows(items) {
 
         return `
         <div class="inv-list-row-group" style="display:flex; flex-direction: column;">
-            <div class="inv-list-row" onclick="const b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none'" style="cursor:pointer; display:grid; grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr; align-items:center; padding: 10px 15px;" data-name="${escHtml(group.name).toLowerCase()}">
+            <div class="inv-list-row" onclick="const b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none'" style="cursor:pointer; display:grid; grid-template-columns: ${_hidePrice ? '2.5fr 1fr 1fr' : '2.5fr 1fr 1fr 1fr 1fr'}; align-items:center; padding: 10px 15px;" data-name="${escHtml(group.name).toLowerCase()}">
                 <div style="display:flex; align-items:center;">
                     <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: #94a3b8; margin-right: 8px;"></i>
                     <span class="row-name">${escHtml(group.name)} ${warningIcon}</span>
@@ -356,8 +411,8 @@ function renderInventoryRows(items) {
                     <span class="qty-badge ${badgeClass}">${qtyLabel}</span>
                     ${lowTag}
                 </div>
-                <span style="color:#374151; font-weight:600; font-size:0.85rem;">ج.م ${unitPrice0.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                <span style="font-weight:700; color:#059669; font-size:0.85rem;">ج.م ${groupTotalValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                ${_hidePrice ? '' : `<span class="col-price" style="color:#374151; font-weight:600; font-size:0.85rem;">ج.م ${unitPrice0.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`}
+                ${_hidePrice ? '' : `<span class="col-price" style="font-weight:700; color:#059669; font-size:0.85rem;">ج.م ${groupTotalValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`}
                 <span class="row-expiry" style="color:#64748b;">${group.batches.length > 1 ? group.batches.length + ' Batches' : '1 Batch'}</span>
             </div>
             ${batchesHtml}
@@ -527,18 +582,24 @@ async function submitNewWarehouse(e) {
             body: JSON.stringify({ name, location: loc, capacity: cap })
         });
 
-        if (!res.ok) throw new Error('Server error');
+        if (res.ok) {
+            const result = await res.json();
+            const newWh = result.data || result;
+            warehouses.push(newWh);
 
-        const newWh = await res.json();
-        warehouses.push(newWh);
-
-        renderWarehouseCards();
-        renderTabs();
-        closeAddModal();
-        showToast('success', `Warehouse "${name}" created!`);
-        await loadStats();
+            renderWarehouseCards();
+            renderTabs();
+            closeAddModal();
+            showToast('success', `Warehouse "${name}" created!`);
+            await loadStats();
+        } else {
+            const err = await res.json();
+            console.error('Failed to create warehouse:', err);
+            showToast('error', err.error || 'Failed to create warehouse.');
+        }
     } catch (err) {
-        showToast('error', 'Failed to create warehouse.');
+        console.error('Network error creating warehouse:', err);
+        showToast('error', 'Failed to create warehouse. Network error.');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-plus"></i> Create Warehouse';

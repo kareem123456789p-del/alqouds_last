@@ -4,31 +4,42 @@ const pool = require('../db');
 exports.searchProducts = async (req, res, next) => {
     try {
         const query = req.query.q || '';
-        const warehouseId = parseInt(req.query.warehouse_id) || 6;
+        const warehouseId = req.query.warehouse_id ? parseInt(req.query.warehouse_id) : null;
         const searchPattern = `%${query}%`;
         
-        // Fetch products matching name or sku, get stock only for specified warehouse_id.
-        // Also fetch nearest_expiry.
-        // Include products even if current_stock is 0 or NULL in this warehouse, to show to user.
+        // Build stock query based on whether a specific warehouse is selected
+        let stockCondition, expiryCondition, params;
+        if (warehouseId) {
+            // Filter by specific warehouse and branch
+            stockCondition = 'WHERE product_id = p.id AND warehouse_id = ? AND branch_id = ?';
+            expiryCondition = 'WHERE product_id = p.id AND warehouse_id = ? AND branch_id = ? AND current_stock > 0';
+            params = [warehouseId, req.branchId, warehouseId, req.branchId, searchPattern, searchPattern];
+        } else {
+            // Aggregate across ALL warehouses for the branch
+            stockCondition = 'WHERE product_id = p.id AND branch_id = ?';
+            expiryCondition = 'WHERE product_id = p.id AND branch_id = ? AND current_stock > 0';
+            params = [req.branchId, req.branchId, searchPattern, searchPattern];
+        }
+
         const [products] = await pool.execute(`
             SELECT 
                 p.id, p.name, p.sku, p.price, p.purchase_price,
                 COALESCE((
                     SELECT SUM(current_stock) 
                     FROM warehouse_inventory 
-                    WHERE product_id = p.id AND warehouse_id = ? AND branch_id = ?
+                    ${stockCondition}
                 ), 0) as total_stock,
                 (
                     SELECT expiry_date 
                     FROM warehouse_inventory 
-                    WHERE product_id = p.id AND warehouse_id = ? AND branch_id = ? AND current_stock > 0 
+                    ${expiryCondition}
                     ORDER BY expiry_date ASC LIMIT 1
                 ) as nearest_expiry
             FROM products p
             WHERE p.is_deleted = 0 AND p.is_active = 1
             AND (p.name LIKE ? OR p.sku LIKE ?)
             LIMIT 50
-        `, [warehouseId, req.branchId, warehouseId, req.branchId, searchPattern, searchPattern]);
+        `, params);
 
         res.json(products);
     } catch (err) { next(err); }
@@ -37,7 +48,7 @@ exports.searchProducts = async (req, res, next) => {
 // Shift Management
 exports.getCurrentShift = async (req, res, next) => {
     try {
-        const [shifts] = await pool.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
+        const [shifts] = await pool.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' AND branch_id = ? ORDER BY id DESC LIMIT 1", [req.branchId || 1]);
         if (shifts.length === 0) {
             return res.json({ shift: null });
         }
@@ -47,17 +58,17 @@ exports.getCurrentShift = async (req, res, next) => {
 
 exports.openShift = async (req, res, next) => {
     try {
-        const [shifts] = await pool.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN'");
+        const [shifts] = await pool.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' AND branch_id = ?", [req.branchId || 1]);
         if (shifts.length > 0) return res.status(400).json({ error: 'A shift is already open.' });
 
-        const [result] = await pool.execute("INSERT INTO retail_shifts (status) VALUES ('OPEN')");
+        const [result] = await pool.execute("INSERT INTO retail_shifts (status, branch_id) VALUES ('OPEN', ?)", [req.branchId || 1]);
         res.json({ success: true, shift_id: result.insertId });
     } catch (err) { next(err); }
 };
 
 exports.closeShift = async (req, res, next) => {
     try {
-        const [shifts] = await pool.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
+        const [shifts] = await pool.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' AND branch_id = ? ORDER BY id DESC LIMIT 1", [req.branchId || 1]);
         if (shifts.length === 0) return res.status(400).json({ error: 'No open shift to close.' });
 
         const shiftId = shifts[0].id;
@@ -150,7 +161,8 @@ exports.recordSale = async (req, res, next) => {
     let connection;
     try {
         const { items, warehouse_id } = req.body;
-        const sourceWarehouseId = parseInt(warehouse_id) || 6;
+        const sourceWarehouseId = parseInt(warehouse_id);
+        if (!sourceWarehouseId) return res.status(400).json({ error: 'يجب تحديد المخزن المصدر.' });
         if (!items || items.length === 0) return res.status(400).json({ error: 'No items in sale.' });
 
         connection = await pool.getConnection();
@@ -219,8 +231,8 @@ exports.recordSale = async (req, res, next) => {
 
         // Insert Sale
         const [saleRes] = await connection.execute(
-            "INSERT INTO retail_sales (shift_id, total_amount, profit_amount) VALUES (?, ?, ?)",
-            [shiftId, totalAmount, totalProfit]
+            "INSERT INTO retail_sales (shift_id, total_amount, profit_amount, branch_id) VALUES (?, ?, ?, ?)",
+            [shiftId, totalAmount, totalProfit, req.branchId || 1]
         );
         const saleId = saleRes.insertId;
 
@@ -271,8 +283,9 @@ exports.processReturn = async (req, res, next) => {
     let connection;
     try {
         const { original_sale_id, items } = req.body;
-        // Default warehouse for returns (Main Warehouse or Shop)
-        const warehouseId = parseInt(req.body.warehouse_id) || 6; 
+        // Warehouse for returns - must be provided by frontend
+        const warehouseId = parseInt(req.body.warehouse_id);
+        if (!warehouseId) return res.status(400).json({ error: 'يجب تحديد المخزن للمرتجعات.' });
 
         if (!items || items.length === 0) {
             return res.status(400).json({ error: 'No items to return.' });
@@ -340,8 +353,8 @@ exports.processReturn = async (req, res, next) => {
 
         // Insert Negative Sale Record
         const [saleRes] = await connection.execute(
-            "INSERT INTO retail_sales (shift_id, total_amount, profit_amount) VALUES (?, ?, ?)",
-            [shiftId, -refundTotal, -refundProfit]
+            "INSERT INTO retail_sales (shift_id, total_amount, profit_amount, branch_id) VALUES (?, ?, ?, ?)",
+            [shiftId, -refundTotal, -refundProfit, req.branchId || 1]
         );
         const returnSaleId = saleRes.insertId;
 
