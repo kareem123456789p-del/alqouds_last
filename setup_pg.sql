@@ -173,7 +173,8 @@ CREATE TABLE order_items (
     profit_margin DECIMAL(5,2)           DEFAULT 0.00,
     discount      DECIMAL(10,2)          DEFAULT 0.00,
     tax           DECIMAL(10,2)          DEFAULT 0.00,
-    subtotal      DECIMAL(12,2) NOT NULL DEFAULT 0.00
+    subtotal      DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    branch_id     INT                    DEFAULT 1
 );
 
 CREATE TABLE client_transactions (
@@ -183,7 +184,8 @@ CREATE TABLE client_transactions (
     type         VARCHAR(50)            DEFAULT NULL,
     amount       DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     reference_id INT                    DEFAULT NULL,
-    date         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    date         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    branch_id    INT                    DEFAULT 1
 );
 
 CREATE TABLE supplier_transactions (
@@ -192,7 +194,8 @@ CREATE TABLE supplier_transactions (
     import_log_id    INT                    DEFAULT NULL REFERENCES import_logs(id) ON DELETE SET NULL,
     total_amount     DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     transaction_type VARCHAR(50)            DEFAULT NULL,
-    created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    branch_id        INT                    DEFAULT 1
 );
 
 CREATE TABLE employee_withdrawals (
@@ -235,7 +238,8 @@ CREATE TABLE retail_sale_items (
     qty INT NOT NULL,
     cost_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     selling_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    profit_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00
+    profit_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    branch_id INT DEFAULT 1
 );
 
 CREATE TABLE payments (
