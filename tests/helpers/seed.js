@@ -269,18 +269,8 @@ async function seed(client) {
     }
   }
 
-  // Initial seeded order in branch 1 for lifecycle / details inspection
-  await client.query(
-    `INSERT INTO orders (id, order_number, client_id, pharmacy_id, warehouse_id, total_amount, status, branch_id, created_by)
-     VALUES (1, '#ORD-2026-1001', NULL, 2, 1, 100.00, 'Pending', 1, 1)`
-  );
-  await client.query(
-    `INSERT INTO order_items (order_id, product_id, warehouse_id, qty, base_price, unit_price, subtotal, branch_id)
-     VALUES (1, 1, 1, 10, 5.00, 10.00, 100.00, 1)`
-  );
-
   // Keep sequences ahead of the explicit ids we inserted.
-  const tables = ['branches', 'staff', 'uom', 'products', 'warehouses', 'doctors', 'pharmacies', 'local_suppliers', 'orders', 'order_items'];
+  const tables = ['branches', 'staff', 'uom', 'products', 'warehouses', 'doctors', 'pharmacies', 'local_suppliers'];
   for (const table of tables) {
     await client.query(
       `SELECT setval(pg_get_serial_sequence('${table}','id'), COALESCE((SELECT MAX(id) FROM ${table}), 1))`

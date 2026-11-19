@@ -68,7 +68,7 @@ describe('POST /api/retail/returns', () => {
     expect(Number(returnItems[0].qty)).toBe(-2);
   });
 
-  test.failing('retail return must validate against sold_qty - already_returned_qty (over-return -> 400) @known-bug D-BUG-1', async () => {
+  test('retail return must validate against sold_qty - already_returned_qty (over-return -> 400) @known-bug D-BUG-1', async () => {
     const pos = await loginAs('pos1');
     const opened = await pos.post('/api/retail/shifts/open');
     const saleRes = await pos.post('/api/retail/sales').send({ warehouse_id: 1, items: [{ product_id: 1, qty: 3, unit_price: 5 }] });
@@ -84,7 +84,7 @@ describe('POST /api/retail/returns', () => {
     expect(await stockSum(1, 1)).toBe(stockBefore);
   });
 
-  test.failing('retail return must reject a product that is not on the original invoice @known-bug D-BUG-1', async () => {
+  test('retail return must reject a product that is not on the original invoice @known-bug D-BUG-1', async () => {
     const pos = await loginAs('pos1');
     const opened = await pos.post('/api/retail/shifts/open');
     const saleRes = await pos.post('/api/retail/sales').send({ warehouse_id: 1, items: [{ product_id: 1, qty: 3, unit_price: 5 }] });
@@ -100,7 +100,7 @@ describe('POST /api/retail/returns', () => {
     expect(await stockSum(1, 1)).toBe(stockBefore);
   });
 
-  test.failing('retail return must reject a nonexistent original invoice @known-bug D-BUG-1', async () => {
+  test('retail return must reject a nonexistent original invoice @known-bug D-BUG-1', async () => {
     const pos = await loginAs('pos1');
     const opened = await pos.post('/api/retail/shifts/open');
 

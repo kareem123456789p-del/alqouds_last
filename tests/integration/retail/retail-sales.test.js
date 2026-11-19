@@ -66,12 +66,12 @@ describe('POST /api/retail/sales', () => {
     expect(res.status).toBe(401);
   });
 
-  test.failing('POST /api/retail/sales requires an open shift, no shift -> 400, no stock movement @known-bug D-BUG-10', async () => {
+  test('POST /api/retail/sales requires an open shift, no shift -> 400, no stock movement @known-bug D-BUG-10', async () => {
     const pos = await loginAs('pos1');
     const res = await pos.post('/api/retail/sales').send({ warehouse_id: 1, items: [{ product_id: 1, qty: 3, unit_price: 5 }] });
     expect(res.status).toBe(400);
     expect(await count('retail_sales')).toBe(0);
-    expect(await stockSum(1)).toBe(60);
+    expect(await stockSum(1, 1)).toBe(60);
   });
 
   test('records a valid sale with FEFO deduction and honest accounting', async () => {
@@ -114,7 +114,7 @@ describe('POST /api/retail/sales', () => {
     expect(Number(items[0].returned_qty || 0)).toBe(0);
   });
 
-  test.failing('POS sale must use the caller branch open shift, not a global one @known-bug D-BUG-2', async () => {
+  test('POS sale must use the caller branch open shift, not a global one @known-bug D-BUG-2', async () => {
     const pos1 = await loginAs('pos1');
     const pos2 = await loginAs('pos2');
     const s1 = await pos1.post('/api/retail/shifts/open');
@@ -129,7 +129,7 @@ describe('POST /api/retail/sales', () => {
     expect(Number(sale.shift_id)).toBe(Number(s1.body.shift_id));
   });
 
-  test.failing('POS sale must use the database cost instead of client-supplied cost_price @known-bug D-BUG-4', async () => {
+  test('POS sale must use the database cost instead of client-supplied cost_price @known-bug D-BUG-4', async () => {
     const pos = await loginAs('pos1');
     const opened = await pos.post('/api/retail/shifts/open');
     const res = await pos.post('/api/retail/sales').send({
@@ -144,7 +144,7 @@ describe('POST /api/retail/sales', () => {
     expect(Number(items[0].selling_price)).toBe(5);
   });
 
-  test.failing('zero-cost POS sale must contribute 0 profit until admin backfills the cost @known-bug D-BUG-12', async () => {
+  test('zero-cost POS sale must contribute 0 profit until admin backfills the cost @known-bug D-BUG-12', async () => {
     const pos = await loginAs('pos1');
     const opened = await pos.post('/api/retail/shifts/open');
 
@@ -156,7 +156,7 @@ describe('POST /api/retail/sales', () => {
     expect(Number(items[0].profit_amount)).toBe(0);
   });
 
-  test.failing('POS sale with insufficient stock must return 400 and roll back cleanly @known-bug D-BUG-11', async () => {
+  test('POS sale with insufficient stock must return 400 and roll back cleanly @known-bug D-BUG-11', async () => {
     const pos = await loginAs('pos1');
     const opened = await pos.post('/api/retail/shifts/open');
 
@@ -188,7 +188,7 @@ describe('GET /api/retail/sales/:id', () => {
     expect(Number(res.body.items[0].cost_price)).toBe(2);
   });
 
-  test.failing('GET /api/retail/sales/:id must 404 a sale from another branch @known-bug D-BUG-3', async () => {
+  test('GET /api/retail/sales/:id must 404 a sale from another branch @known-bug D-BUG-3', async () => {
     const pos2 = await loginAs('pos2');
     const opened2 = await pos2.post('/api/retail/shifts/open');
     const saleRes = await pos2.post('/api/retail/sales').send({ warehouse_id: 3, items: [{ product_id: 1, qty: 2, unit_price: 5 }] });
@@ -254,7 +254,7 @@ describe('admin price repair', () => {
     expect(res2.status).toBe(400);
   });
 
-  test.failing('admin zero-cost routes must reject non-admin callers @known-bug D-BUG-5', async () => {
+  test('admin zero-cost routes must reject non-admin callers @known-bug D-BUG-5', async () => {
     const emp = await loginAs('pos1');
     const list = await emp.get('/api/retail/admin/zero-cost-products');
     expect(list.status).toBe(403);

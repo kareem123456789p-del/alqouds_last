@@ -153,7 +153,7 @@ describe('DELETE /api/suppliers/:id', () => {
     expect(res.status).toBe(401);
   });
 
-  test.failing('supplier delete with existing transactions must be rejected cleanly @known-bug D-BUG-9', async () => {
+  test('supplier delete with existing transactions must be rejected cleanly @known-bug D-BUG-9', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.delete('/api/suppliers/1');
     expect([400, 401, 403, 404, 409]).toContain(res.status);
@@ -166,7 +166,7 @@ describe('GET /api/suppliers/:id/history', () => {
     expect(res.status).toBe(401);
   });
 
-  test.failing('GET /api/suppliers/:id/history must equal the supplier ledger sum @known-bug D-BUG-13', async () => {
+  test('GET /api/suppliers/:id/history must equal the supplier ledger sum @known-bug D-BUG-13', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.get('/api/suppliers/1/history');
     expect(res.status).toBe(200);

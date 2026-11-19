@@ -92,7 +92,19 @@ const update = async (req, res, next) => {
  */
 const remove = async (req, res, next) => {
     try {
-        await pool.execute('DELETE FROM local_suppliers WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]);
+        const [txRows] = await pool.execute(
+            'SELECT COUNT(*) as cnt FROM supplier_transactions WHERE supplier_id = ?',
+            [req.params.id]
+        );
+        const cnt = txRows[0]?.cnt ?? txRows[0]?.count ?? 0;
+        if (Number(cnt) > 0) {
+            return res.status(400).json({ error: 'Cannot delete supplier with existing transactions.' });
+        }
+
+        const [result] = await pool.execute('DELETE FROM local_suppliers WHERE id = ? AND branch_id = ?', [req.params.id, req.branchId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Supplier not found' });
+        }
         res.json({ success: true });
     } catch (err) { next(err); }
 };
@@ -110,24 +122,23 @@ const getHistory = async (req, res, next) => {
         const [rows] = await pool.execute(`
             SELECT
                 st.id AS st_id,
-                COALESCE(il.shipment_id, CONCAT('LEGACY-', il.id)) AS shipment_group,
+                COALESCE(il.shipment_id, CONCAT('TX-', st.id)) AS shipment_group,
                 st.created_at,
                 st.total_amount,
                 il.invoice_image,
                 il.quantity,
                 il.unit_price,
-                p.name AS product_name
+                COALESCE(p.name, 'General Transaction') AS product_name
             FROM supplier_transactions st
-            JOIN import_logs il ON st.import_log_id = il.id
-            JOIN products p ON il.product_id = p.id
+            LEFT JOIN import_logs il ON st.import_log_id = il.id
+            LEFT JOIN products p ON il.product_id = p.id
             JOIN local_suppliers ls ON st.supplier_id = ls.id
             WHERE st.supplier_id = ?
               AND st.transaction_type = 'IMPORT_CHARGE'
               AND ls.branch_id = ?
               AND st.branch_id = ?
-              AND il.branch_id = ?
             ORDER BY st.created_at DESC
-        `, [supplierId, req.branchId, req.branchId, req.branchId]);
+        `, [supplierId, req.branchId, req.branchId]);
 
         // Group rows by shipment_group
         const shipmentMap = new Map();
@@ -154,8 +165,8 @@ const getHistory = async (req, res, next) => {
             // Add the item
             shipment.items.push({
                 product_name: row.product_name,
-                quantity: row.quantity,
-                unit_price: Number(row.unit_price)
+                quantity: row.quantity || 1,
+                unit_price: Number(row.unit_price) || Number(row.total_amount)
             });
         }
 
@@ -181,12 +192,14 @@ const getHistory = async (req, res, next) => {
         const monthGroups = Array.from(monthMap.values());
 
         // ── Overall totals (all transaction types for balance) ────────────────
-        const [[{ totalBalance }]] = await pool.execute(`
-            SELECT COALESCE(SUM(st.total_amount), 0) AS totalBalance
+        const [[rowBal]] = await pool.execute(`
+            SELECT COALESCE(SUM(st.total_amount), 0) AS total_balance
             FROM supplier_transactions st
             JOIN local_suppliers ls ON st.supplier_id = ls.id
             WHERE st.supplier_id = ? AND ls.branch_id = ? AND st.branch_id = ?
         `, [supplierId, req.branchId, req.branchId]);
+
+        const totalBalance = rowBal?.total_balance ?? rowBal?.totalBalance ?? 0;
 
         res.json({
             total_transactions_count: shipments.length,

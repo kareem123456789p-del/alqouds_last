@@ -84,6 +84,12 @@ exports.getShiftReport = async (req, res, next) => {
         const [[shift]] = await pool.execute("SELECT * FROM retail_shifts WHERE id = ?", [shiftId]);
         if (!shift) return res.status(404).json({ error: 'Shift not found.' });
 
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        if (!isAdmin && shift.branch_id !== req.branchId) {
+            return res.status(404).json({ error: 'Shift not found.' });
+        }
+
         const [sales] = await pool.execute("SELECT * FROM retail_sales WHERE shift_id = ?", [shiftId]);
         
         // Explicit column selection — include product_id + products.purchase_price as fallback
@@ -163,61 +169,75 @@ exports.recordSale = async (req, res, next) => {
         const { items, warehouse_id } = req.body;
         const sourceWarehouseId = parseInt(warehouse_id);
         if (!sourceWarehouseId) return res.status(400).json({ error: 'يجب تحديد المخزن المصدر.' });
-        if (!items || items.length === 0) return res.status(400).json({ error: 'No items in sale.' });
+        if (!items || !Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'No items in sale.' });
+
+        // Ensure caller branch has an open shift (D-BUG-2, D-BUG-10)
+        const [shifts] = await pool.execute(
+            "SELECT * FROM retail_shifts WHERE status = 'OPEN' AND branch_id = ? ORDER BY id DESC LIMIT 1",
+            [req.branchId]
+        );
+        if (shifts.length === 0) {
+            return res.status(400).json({ error: 'Shift is closed. Please open a shift first.' });
+        }
+        const shiftId = shifts[0].id;
 
         connection = await pool.getConnection();
         await connection.beginTransaction();
-
-        const [shifts] = await connection.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
-        if (shifts.length === 0) {
-            throw new Error('Shift is closed. Please open a shift first.');
-        }
-        const shiftId = shifts[0].id;
 
         let totalAmount = 0;
         let totalProfit = 0;
         const itemInserts = [];
 
         for (const item of items) {
-            const { product_id, qty, cost_price: frontendCost, unit_price } = item;
-            if (qty <= 0) throw new Error('Quantity must be greater than zero.');
+            const { product_id, qty, unit_price } = item;
+            const quantity = parseInt(qty, 10);
+            if (isNaN(quantity) || quantity <= 0) {
+                await connection.rollback();
+                return res.status(400).json({ error: 'Quantity must be greater than zero.' });
+            }
 
             const validSellingPrice = parseFloat(unit_price) || 0.00;
-            if (validSellingPrice <= 0) throw new Error('Selling price must be greater than zero.');
+            if (validSellingPrice <= 0) {
+                await connection.rollback();
+                return res.status(400).json({ error: 'Selling price must be greater than zero.' });
+            }
 
-            // Get product info — use frontend cost_price if provided, otherwise fetch from DB
+            // Get product info strictly from DB (D-BUG-4: ignore frontend cost_price)
             const [[prod]] = await connection.execute("SELECT name, purchase_price, quantity as total_stock FROM products WHERE id = ?", [product_id]);
-            if (!prod) throw new Error(`Product ${product_id} not found.`);
+            if (!prod) {
+                await connection.rollback();
+                return res.status(404).json({ error: `Product ${product_id} not found.` });
+            }
 
-            const costPrice = (frontendCost !== undefined && frontendCost !== null && parseFloat(frontendCost) > 0)
-                ? parseFloat(frontendCost)
-                : (parseFloat(prod.purchase_price) || 0.00);
+            const dbCost = parseFloat(prod.purchase_price) || 0.00;
+            const costPrice = dbCost > 0 ? dbCost : 0.00;
+            // D-BUG-12: Zero-cost items contribute 0 profit
+            const itemProfit = costPrice > 0 ? (validSellingPrice - costPrice) * quantity : 0;
 
-            const itemProfit = (validSellingPrice - costPrice) * qty;
-
-            totalAmount += validSellingPrice * qty;
+            totalAmount += validSellingPrice * quantity;
             totalProfit += itemProfit;
 
             itemInserts.push({
                 product_id,
-                qty,
+                qty: quantity,
                 costPrice,
                 sellingPrice: validSellingPrice,
                 itemProfit
             });
 
-            // FEFO Deduction from the selected warehouse
+            // FEFO Deduction from the selected warehouse (D-BUG-11: 400 on insufficient stock)
             const [batches] = await connection.execute(
                 'SELECT id, current_stock FROM warehouse_inventory WHERE product_id = ? AND warehouse_id = ? AND branch_id = ? AND current_stock > 0 ORDER BY expiry_date ASC',
                 [product_id, sourceWarehouseId, req.branchId]
             );
 
             const availableStock = batches.reduce((sum, b) => sum + b.current_stock, 0);
-            if (availableStock < qty) {
-                throw new Error(`Insufficient stock for ${prod.name} in the selected warehouse. Need ${qty}, but only ${availableStock} available.`);
+            if (availableStock < quantity) {
+                await connection.rollback();
+                return res.status(400).json({ error: `Insufficient stock for ${prod.name} in the selected warehouse. Need ${quantity}, but only ${availableStock} available.` });
             }
 
-            let remainingToDeduct = qty;
+            let remainingToDeduct = quantity;
             for (const batch of batches) {
                 if (remainingToDeduct <= 0) break;
                 const deduct = Math.min(batch.current_stock, remainingToDeduct);
@@ -226,7 +246,7 @@ exports.recordSale = async (req, res, next) => {
             }
 
             // Sync total stock on products table
-            await connection.execute('UPDATE products SET quantity = quantity - ? WHERE id = ?', [qty, product_id]);
+            await connection.execute('UPDATE products SET quantity = quantity - ? WHERE id = ?', [quantity, product_id]);
         }
 
         // Insert Sale
@@ -249,7 +269,7 @@ exports.recordSale = async (req, res, next) => {
     } catch (err) {
         if (connection) await connection.rollback();
         console.error("Retail Sale Error:", err);
-        res.status(500).json({ error: err.message || 'Error recording sale' });
+        res.status(400).json({ error: err.message || 'Error recording sale' });
     } finally {
         if (connection) connection.release();
     }
@@ -263,6 +283,11 @@ exports.getSaleInvoice = async (req, res, next) => {
         const [[sale]] = await pool.execute("SELECT * FROM retail_sales WHERE id = ?", [saleId]);
         
         if (!sale) {
+            return res.status(404).json({ error: 'Invoice not found.' });
+        }
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        if (!isAdmin && sale.branch_id !== req.branchId) {
             return res.status(404).json({ error: 'Invoice not found.' });
         }
 
@@ -283,21 +308,34 @@ exports.processReturn = async (req, res, next) => {
     let connection;
     try {
         const { original_sale_id, items } = req.body;
-        // Warehouse for returns - must be provided by frontend
         const warehouseId = parseInt(req.body.warehouse_id);
         if (!warehouseId) return res.status(400).json({ error: 'يجب تحديد المخزن للمرتجعات.' });
 
-        if (!items || items.length === 0) {
+        if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'No items to return.' });
         }
 
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        // Ensure there's an OPEN shift to deduct the return from
-        const [shifts] = await connection.execute("SELECT * FROM retail_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
+        // Ensure original sale exists in caller's branch (D-BUG-1)
+        const [sales] = await connection.execute(
+            "SELECT * FROM retail_sales WHERE id = ? AND branch_id = ?",
+            [original_sale_id, req.branchId]
+        );
+        if (!sales || sales.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ error: 'Original sale invoice not found.' });
+        }
+
+        // Ensure there's an OPEN shift in caller branch to deduct the return from
+        const [shifts] = await connection.execute(
+            "SELECT * FROM retail_shifts WHERE status = 'OPEN' AND branch_id = ? ORDER BY id DESC LIMIT 1",
+            [req.branchId]
+        );
         if (shifts.length === 0) {
-            throw new Error('Shift is closed. Please open a shift to process returns.');
+            await connection.rollback();
+            return res.status(400).json({ error: 'Shift is closed. Please open a shift to process returns.' });
         }
         const shiftId = shifts[0].id;
 
@@ -309,10 +347,27 @@ exports.processReturn = async (req, res, next) => {
             const { product_id, return_qty, unit_price, cost_price } = item;
             const qty = parseInt(return_qty, 10);
             
-            if (qty <= 0) continue; // Skip if 0
+            if (isNaN(qty) || qty <= 0) continue;
 
-            const sellingPrice = parseFloat(unit_price) || 0;
-            const cost = parseFloat(cost_price) || 0;
+            // Validate that product was part of original sale
+            const [saleItems] = await connection.execute(
+                "SELECT * FROM retail_sale_items WHERE sale_id = ? AND product_id = ? AND qty > 0",
+                [original_sale_id, product_id]
+            );
+            if (!saleItems || saleItems.length === 0) {
+                await connection.rollback();
+                return res.status(400).json({ error: `Product ${product_id} was not part of original sale invoice.` });
+            }
+            const saleItem = saleItems[0];
+            const alreadyReturned = parseInt(saleItem.returned_qty, 10) || 0;
+            const soldQty = parseInt(saleItem.qty, 10) || 0;
+            if (qty > (soldQty - alreadyReturned)) {
+                await connection.rollback();
+                return res.status(400).json({ error: `Return quantity ${qty} exceeds available returnable quantity (${soldQty - alreadyReturned}).` });
+            }
+
+            const sellingPrice = parseFloat(unit_price) || parseFloat(saleItem.selling_price) || 0;
+            const cost = parseFloat(cost_price) || parseFloat(saleItem.cost_price) || 0;
 
             const itemRefundAmount = sellingPrice * qty;
             const itemRefundProfit = (sellingPrice - cost) * qty;
@@ -327,6 +382,12 @@ exports.processReturn = async (req, res, next) => {
                 sellingPrice,
                 itemProfit: -itemRefundProfit
             });
+
+            // Update returned_qty on the sale item
+            await connection.execute(
+                "UPDATE retail_sale_items SET returned_qty = COALESCE(returned_qty, 0) + ? WHERE id = ?",
+                [qty, saleItem.id]
+            );
 
             // 1. Restore global stock in products table
             await connection.execute('UPDATE products SET quantity = quantity + ? WHERE id = ?', [qty, product_id]);
@@ -348,7 +409,8 @@ exports.processReturn = async (req, res, next) => {
         }
 
         if (returnInserts.length === 0) {
-            throw new Error('No valid quantities to return.');
+            await connection.rollback();
+            return res.status(400).json({ error: 'No valid quantities to return.' });
         }
 
         // Insert Negative Sale Record
@@ -372,7 +434,7 @@ exports.processReturn = async (req, res, next) => {
     } catch (err) {
         if (connection) await connection.rollback();
         console.error("Retail Return Error:", err);
-        res.status(500).json({ error: err.message || 'Error processing return' });
+        res.status(400).json({ error: err.message || 'Error processing return' });
     } finally {
         if (connection) connection.release();
     }

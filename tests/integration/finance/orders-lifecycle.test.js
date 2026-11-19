@@ -202,9 +202,13 @@ describe('POST /api/orders/:id/return', () => {
 describe('GET /api/orders/:id/details & items', () => {
   test('GET /api/orders/:id/details returns full order details @known-bug C-BUG-2', async () => {
     const emp = await loginAs('emp1');
-    // Seeded order id 1
-    const res = await emp.get('/api/orders/1/details');
-    // The query references nonexistent orders.created_by column causing 500
+    const created = await emp.post('/api/orders').send({
+      client_id: 'doc-1',
+      warehouse_id: 1,
+      items: [{ product_id: 1, warehouse_id: 1, qty: 2, unit_price: 5.0, base_price: 2.0 }],
+    });
+    const orderId = created.body.order_id;
+    const res = await emp.get(`/api/orders/${orderId}/details`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.order).toBeDefined();

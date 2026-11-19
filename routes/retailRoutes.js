@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const retailController = require('../controllers/retailController');
+const { requireAdmin } = require('../controllers/authController');
 
 router.get('/products/search', retailController.searchProducts);
 router.get('/shifts/current', retailController.getCurrentShift);
@@ -12,7 +13,7 @@ router.get('/sales/:id', retailController.getSaleInvoice);
 router.post('/returns', retailController.processReturn);
 
 // Admin maintenance routes
-router.get('/admin/zero-cost-products', retailController.listZeroCostProducts);
-router.post('/admin/fix-price', retailController.fixProductPrice);
+router.get('/admin/zero-cost-products', requireAdmin, retailController.listZeroCostProducts);
+router.post('/admin/fix-price', requireAdmin, retailController.fixProductPrice);
 
 module.exports = router;

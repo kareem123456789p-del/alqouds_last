@@ -154,7 +154,7 @@ describe('POST /api/imports/:id/return', () => {
     expect(res.status).toBe(401);
   });
 
-  test.failing('full return marks the import log Returned @known-bug D-BUG-7', async () => {
+  test('full return marks the import log Returned @known-bug D-BUG-7', async () => {
     const emp = await loginAs('emp1');
     const items = [{ product_id: 1, warehouse_id: 1, supplier_id: 1, quantity: 5, unit_price: 2.5, batch_number: 'B-P1-NEW', expiry_date: isoDate(30) }];
     const created = await emp.post('/api/imports').field('items', JSON.stringify(items));
@@ -169,7 +169,7 @@ describe('POST /api/imports/:id/return', () => {
     expect(Number(log.returned_qty)).toBe(5);
   });
 
-  test.failing('import create must reject a warehouse from another branch @known-bug D-BUG-8', async () => {
+  test('import create must reject a warehouse from another branch @known-bug D-BUG-8', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.post('/api/imports').field('items', JSON.stringify([
       { product_id: 1, warehouse_id: 3, supplier_id: 1, quantity: 2, unit_price: 2, batch_number: 'B-P1-FOREIGN', expiry_date: isoDate(20) },
@@ -210,7 +210,7 @@ describe('POST /api/imports/:id/return', () => {
     expect(await stockSum(1, 1)).toBe(stockBefore);
   });
 
-  test.failing('import return must scope the import log to the caller branch @known-bug D-BUG-6', async () => {
+  test('import return must scope the import log to the caller branch @known-bug D-BUG-6', async () => {
     const emp2 = await loginAs('emp2');
     const items = [{ product_id: 1, warehouse_id: 3, supplier_id: 3, quantity: 2, unit_price: 2, batch_number: 'B2-P1-RET', expiry_date: isoDate(15) }];
     const created = await emp2.post('/api/imports').field('items', JSON.stringify(items));

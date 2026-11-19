@@ -136,6 +136,17 @@ const createImport = async (req, res, next) => {
                     throw new Error('All fields are required for each item.');
                 }
 
+                // D-BUG-8: Validate warehouse belongs to caller's branch
+                const [whCheck] = await connection.execute(
+                    'SELECT id FROM warehouses WHERE id = ? AND branch_id = ?',
+                    [warehouse_id, req.branchId]
+                );
+                if (!whCheck || whCheck.length === 0) {
+                    const err = new Error('Warehouse not found in caller branch.');
+                    err.statusCode = 400;
+                    throw err;
+                }
+
                 const qty = parseInt(quantity, 10);
                 const price = parseFloat(unit_price);
                 const totalAmount = qty * price;
@@ -205,7 +216,8 @@ const createImport = async (req, res, next) => {
 
         } catch (txnError) {
             await connection.rollback();
-            throw txnError;
+            const status = txnError.statusCode || 400;
+            return res.status(status).json({ error: txnError.message });
         } finally {
             connection.release();
         }
@@ -232,11 +244,13 @@ const processImportReturn = async (req, res, next) => {
         await connection.beginTransaction();
 
         try {
-            // 1. Get the import log
-            const [[importLog]] = await connection.execute('SELECT * FROM import_logs WHERE id = ?', [importLogId]);
+            // 1. Get the import log strictly within caller's branch (D-BUG-6)
+            const [[importLog]] = await connection.execute('SELECT * FROM import_logs WHERE id = ? AND branch_id = ?', [importLogId, req.branchId]);
 
             if (!importLog) {
-                throw new Error('Import log not found.');
+                const err = new Error('Import log not found.');
+                err.statusCode = 404;
+                throw err;
             }
 
             const maxReturnable = importLog.quantity - (importLog.returned_qty || 0);
@@ -290,16 +304,17 @@ const processImportReturn = async (req, res, next) => {
                 [importLog.supplier_id, importLogId, -itemReturnValue, 'RETURN_CREDIT', req.branchId]
             );
 
-            // Check if fully returned
+            // Check if fully returned (D-BUG-7)
             if (importLog.quantity === (importLog.returned_qty || 0) + qty) {
-                await connection.execute('UPDATE import_logs SET status = "Returned" WHERE id = ?', [importLogId]);
+                await connection.execute("UPDATE import_logs SET status = 'Returned' WHERE id = ?", [importLogId]);
             }
 
             await connection.commit();
             res.json({ success: true, message: 'Return to supplier processed successfully.', refund_amount: itemReturnValue });
         } catch (txnError) {
             await connection.rollback();
-            res.status(400).json({ error: txnError.message });
+            const status = txnError.statusCode || 400;
+            res.status(status).json({ error: txnError.message });
         } finally {
             connection.release();
         }

@@ -131,7 +131,7 @@ describe('GET /api/retail/shifts/:id/report', () => {
     expect(res.body.items).toHaveLength(0);
   });
 
-  test.failing('GET /api/retail/shifts/:id/report must 404 a shift from another branch @known-bug D-BUG-3', async () => {
+  test('GET /api/retail/shifts/:id/report must 404 a shift from another branch @known-bug D-BUG-3', async () => {
     const pos1 = await loginAs('pos1');
     const pos2 = await loginAs('pos2');
     const s1 = await pos1.post('/api/retail/shifts/open');
