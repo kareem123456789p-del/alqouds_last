@@ -1,0 +1,193 @@
+{
+  "worker": "B",
+  "branch": "qa/B",
+  "domain": "Products, Inventory, Warehouses, Inter-Branch Transfers",
+  "tests": {
+    "files": 5,
+    "cases": 89,
+    "passing": 89,
+    "known_bugs": 14
+  },
+  "routes": [
+    { "method": "GET", "path": "/api/products", "covered": true, "note": "active products with joined UOM; hidden after soft-delete" },
+    { "method": "POST", "path": "/api/products", "covered": true, "note": "name required 400; default quantity/price 0; creates new UOM" },
+    { "method": "PUT", "path": "/api/products/:id", "covered": true, "note": "omitted price wiped B-BUG-1; nonexistent id 200 B-BUG-2" },
+    { "method": "DELETE", "path": "/api/products/:id", "covered": true, "note": "Golden Rule 2: 405 Method Not Allowed, product intact" },
+    { "method": "GET", "path": "/api/inventory", "covered": true, "note": "branch-scoped; ?branch_id and header spoof ignored for employee" },
+    { "method": "PUT", "path": "/api/inventory/:id", "covered": true, "note": "updates stock/expiry; missing stock 500 B-BUG-6; negative stock B-BUG-7" },
+    { "method": "DELETE", "path": "/api/inventory/:id", "covered": true, "note": "soft-deletes product, wipes caller branch warehouse inventory, keeps master row" },
+    { "method": "GET", "path": "/api/inventory/batches/:warehouse_id/:product_id", "covered": true, "note": "FEFO stock > 0, expiry_date ASC; foreign warehouse empty" },
+    { "method": "POST", "path": "/api/warehouse", "covered": true, "note": "requires MANAGE_WAREHOUSES_ADD; lands in caller branch" },
+    { "method": "PUT", "path": "/api/warehouse/:id", "covered": true, "note": "requires MANAGE_WAREHOUSES_EDIT; cross-branch 404 B-BUG-4" },
+    { "method": "DELETE", "path": "/api/warehouse/:id", "covered": true, "note": "requires MANAGE_WAREHOUSES_DELETE; cross-branch 404 B-BUG-4; cascade delete stock B-BUG-5" },
+    { "method": "GET", "path": "/api/warehouse/:id/inventory", "covered": true, "note": "branch-scoped; foreign warehouse returns empty" },
+    { "method": "GET", "path": "/api/warehouse/list", "covered": true, "note": "branch-scoped; branch 1 and 2 only see own warehouses" },
+    { "method": "GET", "path": "/api/warehouse/movements", "covered": true, "note": "branch-scoped import and transfer movements" },
+    { "method": "GET", "path": "/api/warehouse/stats", "covered": true, "note": "stats calculation mismatch vs raw SQL B-BUG-3" },
+    { "method": "GET", "path": "/api/transfers", "covered": true, "note": "shows transfers where caller is source or destination" },
+    { "method": "POST", "path": "/api/transfers", "covered": true, "note": "negative qty B-BUG-8; insufficient batch 500 B-BUG-9; product mismatch B-BUG-10; code collision B-BUG-13; dest branch check B-BUG-14" },
+    { "method": "PATCH", "path": "/api/transfers/:id/status", "covered": true, "note": "state machine PENDING->IN_TRANSIT->COMPLETED; destination batch creation B-BUG-11; SUPER ADMIN recognition B-BUG-12" },
+    { "method": "GET", "path": "/api/transfers/audit-logs", "covered": true, "note": "branch-scoped stock audit trail" },
+    { "method": "GET", "path": "/api/transfers/products/:branch_id", "covered": true, "note": "returns available products for transfer in caller branch" },
+    { "method": "GET", "path": "/api/transfers/warehouses", "covered": true, "note": "lists warehouses in caller branch" }
+  ],
+  "bugs": [
+    {
+      "id": "B-BUG-1",
+      "title": "Partial PUT /api/products/:id silently wipes price to 0",
+      "severity": "high",
+      "route": "PUT /api/products/:id",
+      "spec": "readme.md §8.1; partial update must preserve existing price",
+      "expected": "omitted price in body preserves current product price",
+      "actual": "parseFloat(price) || 0 unconditionally resets price to 0",
+      "test": "tests/integration/inventory/products.test.js:96",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-2",
+      "title": "PUT /api/products/:id with nonexistent id returns success 200",
+      "severity": "medium",
+      "route": "PUT /api/products/:id",
+      "spec": "REST convention; 404 on nonexistent resource",
+      "expected": "404 Not Found",
+      "actual": "200 with success: true and message: Product updated successfully",
+      "test": "tests/integration/inventory/products.test.js:118",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-3",
+      "title": "GET /api/warehouse/stats calculation mismatch vs raw inventory SQL",
+      "severity": "medium",
+      "route": "GET /api/warehouse/stats",
+      "spec": "readme.md §Database Schema",
+      "expected": "total stock value and inventory count match raw SQL sum",
+      "actual": "mismatched values due to query logic",
+      "test": "tests/integration/inventory/warehouses.test.js:59",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-4",
+      "title": "Warehouse PUT and DELETE on cross-branch id return 200 silent success",
+      "severity": "high",
+      "route": "PUT /api/warehouse/:id, DELETE /api/warehouse/:id",
+      "spec": "Golden Rule 1: branch isolation",
+      "expected": "404 Not Found when branch-1 attempts to modify/delete branch-2 warehouse",
+      "actual": "200 success without mutating the row",
+      "test": "tests/integration/inventory/warehouses.test.js:197",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-5",
+      "title": "Deleting warehouse with stock cascade-deletes or violates FK",
+      "severity": "high",
+      "route": "DELETE /api/warehouse/:id",
+      "spec": "readme.md §Database Schema",
+      "expected": "400/409 rejecting deletion of warehouse with existing stock",
+      "actual": "500 or silent deletion",
+      "test": "tests/integration/inventory/warehouses.test.js:236",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-6",
+      "title": "PUT /api/inventory/:id without current_stock crashes with 500",
+      "severity": "high",
+      "route": "PUT /api/inventory/:id",
+      "spec": "Input validation contract",
+      "expected": "400 Bad Request",
+      "actual": "500 Internal Server Error (null value violates not-null constraint)",
+      "test": "tests/integration/inventory/inventory.test.js:159",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-7",
+      "title": "PUT /api/inventory/:id accepts and persists negative stock",
+      "severity": "critical",
+      "route": "PUT /api/inventory/:id",
+      "spec": "Inventory integrity; stock >= 0",
+      "expected": "400 Bad Request rejecting negative current_stock",
+      "actual": "persists negative current_stock",
+      "test": "tests/integration/inventory/inventory.test.js:171",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-8",
+      "title": "POST /api/transfers accepts negative or zero quantity",
+      "severity": "critical",
+      "route": "POST /api/transfers",
+      "spec": "Golden Rule 5; transfer quantities must be strictly positive",
+      "expected": "400 Bad Request",
+      "actual": "accepted or crashes at DB constraint",
+      "test": "tests/integration/inventory/transfers.test.js:110",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-9",
+      "title": "POST /api/transfers returns 500 on insufficient/missing batch",
+      "severity": "medium",
+      "route": "POST /api/transfers",
+      "spec": "API error response contract",
+      "expected": "400 Bad Request",
+      "actual": "500 Internal Server Error",
+      "test": "tests/integration/inventory/transfers.test.js:123",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-10",
+      "title": "POST /api/transfers does not validate item_id belongs to batch product",
+      "severity": "high",
+      "route": "POST /api/transfers",
+      "spec": "Data integrity across batch and item",
+      "expected": "400 Bad Request rejecting product/batch mismatch",
+      "actual": "accepted without cross-validation",
+      "test": "tests/integration/inventory/transfers.test.js:142",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-11",
+      "title": "Completing transfer fails if matching destination batch does not exist",
+      "severity": "high",
+      "route": "PATCH /api/transfers/:id/status",
+      "spec": "readme.md §8.6; destination batch created if not existing",
+      "expected": "creates new batch in destination warehouse with transferred qty",
+      "actual": "fails to create or updates wrong row",
+      "test": "tests/integration/inventory/transfers.test.js:332",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-12",
+      "title": "SUPER ADMIN not recognized as admin in transfer status update",
+      "severity": "medium",
+      "route": "PATCH /api/transfers/:id/status",
+      "spec": "readme.md: SUPER ADMIN has global permissions",
+      "expected": "SUPER ADMIN can ship/receive/cancel transfers across branches",
+      "actual": "blocked because role check only checks 'ADMIN' / 'Admin'",
+      "test": "tests/integration/inventory/transfers.test.js:395",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-13",
+      "title": "transfer_code generation via COUNT(*) + 1 collides and causes 500",
+      "severity": "medium",
+      "route": "POST /api/transfers",
+      "spec": "Unique transfer code generation",
+      "expected": "unique code generation resilient to sequence gaps or collisions",
+      "actual": "duplicate key value violates unique constraint transfer_code_key -> 500",
+      "test": "tests/integration/inventory/transfers.test.js:449",
+      "status": "open"
+    },
+    {
+      "id": "B-BUG-14",
+      "title": "POST /api/transfers does not validate destination branch existence before DB FK",
+      "severity": "medium",
+      "route": "POST /api/transfers",
+      "spec": "Input validation",
+      "expected": "400 Bad Request",
+      "actual": "500 FK violation",
+      "test": "tests/integration/inventory/transfers.test.js:153",
+      "status": "open"
+    }
+  ],
+  "questions": [],
+  "gaps": [],
+  "notes": "Worker B test suite passed: 5 suites, 89 tests passed (including test.failing regressions for 14 bugs). 100% route coverage."
+}
