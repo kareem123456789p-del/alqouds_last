@@ -70,9 +70,16 @@ app.use((req, res, next) => {
 
 // خدمة الملفات الثابتة (HTML, CSS, JS)
 const path = require('path');
+
+// Dashboard route (protected: requires auth + ADMIN role) - must be before express.static to block /dashboard.html for non-admins
+app.get(['/dashboard', '/dashboard.html'], requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
     etag: false,
     maxAge: '0',
+    index: false,
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -148,8 +155,9 @@ app.get('/', (req, res) => {
     if (token && sessions.has(token)) {
         const session = sessions.get(token);
         if (Date.now() <= session.expiresAt) {
-            // ADMIN → admin dashboard, everyone else → main operational system
-            const isAdmin = (session.role === 'ADMIN' || session.role === 'Admin' || session.role === 'Super Admin');
+            // ADMIN & SUPER ADMIN → admin dashboard, everyone else → main operational system
+            const role = (session.role || '').toUpperCase();
+            const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
             return res.redirect(isAdmin ? '/dashboard' : '/index.html');
         }
     }

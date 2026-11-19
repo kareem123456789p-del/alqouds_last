@@ -23,7 +23,7 @@ const getSummary = async (req, res, next) => {
             // Admin selected "All Branches" → no branch filter
             branchFilter = '';
             branchParams = [];
-        } else if (requestedBranch && requestedBranch !== 'all') {
+        } else if (requestedBranch && requestedBranch !== 'all' && isAdmin) {
             branchFilter = 'branch_id = $1';
             branchParams = [parseInt(requestedBranch, 10)];
         } else {
@@ -528,7 +528,7 @@ const getBranchPerformance = async (req, res, next) => {
             );
             branches = brRows;
         } else {
-            const bId = requestedBranch && requestedBranch !== 'all' && requestedBranch !== ''
+            const bId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
 
@@ -721,7 +721,7 @@ const getSalesPurchasesTimeline = async (req, res, next) => {
         let branchParams = [];
 
         if (!isAllBranches) {
-            const bId = requestedBranch && requestedBranch !== 'all' && requestedBranch !== ''
+            const bId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
             branchParams = [bId];
@@ -914,7 +914,7 @@ const getTopProducts = async (req, res, next) => {
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = requestedBranch && requestedBranch !== 'all' && requestedBranch !== ''
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1085,7 +1085,7 @@ const getCategoryDistribution = async (req, res, next) => {
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = requestedBranch && requestedBranch !== 'all' && requestedBranch !== ''
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1233,7 +1233,7 @@ const getCriticalAlerts = async (req, res, next) => {
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = requestedBranch && requestedBranch !== 'all' && requestedBranch !== ''
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1475,7 +1475,7 @@ const getSuppliersPayables = async (req, res, next) => {
 
         let branchId = null;
         if (!isAllBranches) {
-            branchId = requestedBranch && requestedBranch !== 'all' && requestedBranch !== ''
+            branchId = (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '' && isAdmin)
                 ? parseInt(requestedBranch, 10)
                 : (req.branchId || 1);
         }
@@ -1626,6 +1626,7 @@ const getSuppliersPayables = async (req, res, next) => {
             total_unsettled_debt: Math.round(totalUnsettledDebt * 100) / 100,
             total_suppliers_count: suppliersList.length,
             avg_settlement_cycle_days: avgSettlementCycle,
+            suppliers: suppliersList,
             suppliers_list: suppliersList
         });
     } catch (err) {
@@ -1646,6 +1647,8 @@ const getSuppliersPayables = async (req, res, next) => {
  */
 const processSupplierPayment = async (req, res, next) => {
     try {
+        const role = (req.user?.role || '').toUpperCase();
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
         const { supplier_id, branch_id, amount, payment_method, notes } = req.body;
 
         // Validation
@@ -1653,7 +1656,7 @@ const processSupplierPayment = async (req, res, next) => {
             return res.status(400).json({ error: 'supplier_id and a positive amount are required' });
         }
 
-        const effectiveBranch = branch_id || req.branchId || 1;
+        const effectiveBranch = isAdmin ? (branch_id || req.branchId || 1) : (req.branchId || 1);
         const method = payment_method || 'cash';
         const refNo = 'PAY-' + Date.now().toString(36).toUpperCase();
 

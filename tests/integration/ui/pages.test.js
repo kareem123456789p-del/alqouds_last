@@ -91,9 +91,8 @@ describe('Authenticated Employee Page Access', () => {
     }
   });
 
-  test.failing('GET /dashboard.html blocks non-admin employee @known-bug E-BUG-4', async () => {
+  test('GET /dashboard.html blocks non-admin employee @known-bug E-BUG-4', async () => {
     const emp = await loginAs('emp1');
-    // Global guard only checks requireAuth, so static dashboard.html is served 200 to regular employees
     const res = await emp.get('/dashboard.html');
     expect([302, 403]).toContain(res.status);
   });
@@ -107,18 +106,16 @@ describe('Admin & Super Admin Redirects', () => {
     expect(res.headers['content-type']).toMatch(/text\/html/);
   });
 
-  test.failing('GET / redirects admin to /dashboard @known-bug E-BUG-3', async () => {
+  test('GET / redirects admin to /dashboard @known-bug E-BUG-3', async () => {
     const admin = await loginAs('admin');
     const res = await admin.get('/');
-    // express.static shadows app.get('/') by serving public/index.html (200), bypassing role redirect to /dashboard
     expect([302]).toContain(res.status);
     expect(res.headers.location).toBe('/dashboard');
   });
 
-  test.failing('GET / redirects SUPER ADMIN to /dashboard @known-bug E-BUG-3', async () => {
+  test('GET / redirects SUPER ADMIN to /dashboard @known-bug E-BUG-3', async () => {
     const superadmin = await loginAs('superadmin');
     const res = await superadmin.get('/');
-    // Seed role 'SUPER ADMIN' does not match 'Super Admin', and express.static serves index.html (200)
     expect([302]).toContain(res.status);
     expect(res.headers.location).toBe('/dashboard');
   });

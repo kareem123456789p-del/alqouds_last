@@ -55,7 +55,7 @@ describe('Concurrency: Order Double-Dispatch Race Condition', () => {
 });
 
 describe('Concurrency: Stock Transfer Status Race Condition', () => {
-  test.failing('@known-bug F-BUG-1: concurrent ship requests on same transfer allow double inventory decrement (missing FOR UPDATE lock)', async () => {
+  test('@known-bug F-BUG-1: concurrent ship requests on same transfer allow double inventory decrement (missing FOR UPDATE lock)', async () => {
     const emp1 = await loginAs('emp1');
 
     const srcBatch = await one(

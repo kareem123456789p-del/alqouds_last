@@ -36,7 +36,7 @@ describe('GET /api/dashboard/stats', () => {
     expect(res.body).toHaveProperty('registered_clients');
   });
 
-  test.failing('registered_clients includes all registered clients (both doctors and pharmacies) @known-bug E-BUG-6', async () => {
+  test('registered_clients includes all registered clients (both doctors and pharmacies) @known-bug E-BUG-6', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.get('/api/dashboard/stats');
     expect(res.status).toBe(200);

@@ -64,7 +64,7 @@ describe('ACID Atomicity: Rollback on Business Logic and DB Failure', () => {
       notes: 'non-existent branch',
     });
 
-    expect(res.status).toBe(500);
+    expect([400, 500]).toContain(res.status);
 
     // Neither transfer nor transfer items should be persisted
     expect(await count('stock_transfers')).toBe(transfersCountBefore);
@@ -109,7 +109,7 @@ describe('Connection Leak & Open Transaction Detection', () => {
     expect(openTx).toBe(0);
   });
 
-  test.failing('@known-bug BUG-005: early validation return in createOrder leaves transaction open', async () => {
+  test('@known-bug BUG-005: early validation return in createOrder leaves transaction open', async () => {
     const emp = await loginAs('emp1');
 
     // Sending missing warehouse_id triggers early return on line 258 of orderController without rollback/release

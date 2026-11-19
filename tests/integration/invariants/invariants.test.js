@@ -78,7 +78,7 @@ describe('Invariant: Stock Conservation Across Transfer Lifecycle (Golden Rule 5
     expect(srcBatchAfter.current_stock).toBe(15);
   });
 
-  test.failing('@known-bug B-BUG-14: receiving transfer without existing destination batch fails with 23502 warehouse_id NOT NULL', async () => {
+  test('@known-bug B-BUG-14: receiving transfer without existing destination batch fails with 23502 warehouse_id NOT NULL', async () => {
     const emp1 = await loginAs('emp1');
     const emp2 = await loginAs('emp2');
 

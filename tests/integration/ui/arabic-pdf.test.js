@@ -33,7 +33,7 @@ describe('Arabic PDF Text Pipeline (fixArabic)', () => {
     expect(fixArabic('ABC-XYZ')).toBe('ABC-XYZ');
   });
 
-  test.failing('fixArabic transforms Arabic text into shaped presentation forms in visual order @known-bug E-BUG-5', () => {
+  test('fixArabic transforms Arabic text into shaped presentation forms in visual order @known-bug E-BUG-5', () => {
     const rawArabic = 'مركز القدس';
     const transformed = fixArabic(rawArabic);
 

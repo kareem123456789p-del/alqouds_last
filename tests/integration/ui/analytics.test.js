@@ -87,7 +87,7 @@ describe('GET /api/analytics/summary', () => {
     expect(Number(res.body.total_sales.value)).toBe(3600);
   });
 
-  test.failing('non-admin analyst cannot override branch filter with ?branch_id=2 (Golden Rule 1) @known-bug E-BUG-1', async () => {
+  test('non-admin analyst cannot override branch filter with ?branch_id=2 (Golden Rule 1) @known-bug E-BUG-1', async () => {
     const ana = await loginAs('ana1'); // branch 1 analyst
     const res = await ana.get('/api/analytics/summary?period=all_time&branch_id=2');
     expect(res.status).toBe(200);
@@ -166,17 +166,16 @@ describe('GET /api/analytics charts & breakdowns', () => {
     expect(res.body).toHaveProperty('expiry_risks');
   });
 
-  test.failing('GET /api/analytics/suppliers-payables queries existing payables table without 500 @known-bug E-BUG-7', async () => {
+  test('GET /api/analytics/suppliers-payables queries existing payables table without 500 @known-bug E-BUG-7', async () => {
     const ana = await loginAs('ana1');
     const res = await ana.get('/api/analytics/suppliers-payables');
-    // Fails with 500 because supplier_payments relation does not exist
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('suppliers');
   });
 });
 
 describe('POST /api/analytics/suppliers/pay', () => {
-  test.failing('processes supplier payment and writes supplier_payments row @known-bug E-BUG-7', async () => {
+  test('processes supplier payment and writes supplier_payments row @known-bug E-BUG-7', async () => {
     const ana = await loginAs('ana1');
     const res = await ana.post('/api/analytics/suppliers/pay').send({
       supplier_id: 1,
@@ -184,7 +183,6 @@ describe('POST /api/analytics/suppliers/pay', () => {
       payment_method: 'bank_transfer',
       notes: 'Partial settlement',
     });
-    // Fails with 500 because supplier_payments relation does not exist
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
@@ -201,7 +199,7 @@ describe('POST /api/analytics/suppliers/pay', () => {
     expect(resNeg.status).toBe(400);
   });
 
-  test.failing('non-admin cannot redirect supplier payment to another branch via body.branch_id @known-bug E-BUG-2', async () => {
+  test('non-admin cannot redirect supplier payment to another branch via body.branch_id @known-bug E-BUG-2', async () => {
     const ana = await loginAs('ana1'); // branch 1 analyst
     const res = await ana.post('/api/analytics/suppliers/pay').send({
       supplier_id: 1,
