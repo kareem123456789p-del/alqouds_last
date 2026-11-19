@@ -139,7 +139,7 @@ describe('POST /api/orders — Order Creation & Customer Debt', () => {
     expect(res.status).toBe(404);
   });
 
-  test.failing('createOrder releases DB connection cleanly on validation early-return @known-bug C-BUG-4', async () => {
+  test('createOrder releases DB connection cleanly on validation early-return @known-bug C-BUG-4', async () => {
     const emp = await loginAs('emp1');
     const initialIdle = await openTransactionCount();
 
@@ -153,7 +153,7 @@ describe('POST /api/orders — Order Creation & Customer Debt', () => {
 });
 
 describe('GET /api/orders/clients', () => {
-  test.failing('returns combined list of clients (doctors and pharmacies) @known-bug C-BUG-1', async () => {
+  test('returns combined list of clients (doctors and pharmacies) @known-bug C-BUG-1', async () => {
     const emp = await loginAs('emp1');
     const res = await emp.get('/api/orders/clients');
     // Code queries nonexistent `clients` table causing 500
@@ -205,7 +205,7 @@ describe('GET /api/orders/history/:clientType/:clientId', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('getClientHistory calculates outstanding balance from client total_debt @known-bug C-BUG-10', async () => {
+  test('getClientHistory calculates outstanding balance from client total_debt @known-bug C-BUG-10', async () => {
     const emp = await loginAs('emp1');
     // Simulate a debt payment having reduced doctor total_debt
     await q('UPDATE doctors SET total_debt = total_debt - 500 WHERE id = 1');

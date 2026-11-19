@@ -52,6 +52,10 @@ const recordPayment = async (req, res, next) => {
         const id = actualId ? actualId.trim() : null;
 
         if (!id) throw new Error('Invalid client ID format.');
+        if (typeClean !== 'doc' && typeClean !== 'pharm') {
+            await connection.rollback();
+            return res.status(400).json({ error: 'Invalid client prefix format. Expected doc- or pharm-' });
+        }
 
         let isDoctor = typeClean === 'doc';
         let dbClientId = isDoctor ? id : null;
@@ -67,6 +71,10 @@ const recordPayment = async (req, res, next) => {
             );
             if (!doc) throw new Error('Doctor not found in the active branch.');
             currentDebt = parseFloat(doc.total_debt);
+            if (paymentAmount > currentDebt) {
+                await connection.rollback();
+                return res.status(400).json({ error: 'Payment exceeds total outstanding debt.' });
+            }
 
             await connection.execute(
                 'UPDATE doctors SET total_debt = total_debt - ? WHERE id = ? AND branch_id = ?',
@@ -79,6 +87,10 @@ const recordPayment = async (req, res, next) => {
             );
             if (!pharm) throw new Error('Pharmacy not found in the active branch.');
             currentDebt = parseFloat(pharm.total_debt);
+            if (paymentAmount > currentDebt) {
+                await connection.rollback();
+                return res.status(400).json({ error: 'Payment exceeds total outstanding debt.' });
+            }
 
             await connection.execute(
                 'UPDATE pharmacies SET total_debt = total_debt - ? WHERE id = ? AND branch_id = ?',

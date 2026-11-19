@@ -107,7 +107,7 @@ describe('POST /api/collections', () => {
     expect([400, 404]).toContain(res.status);
   });
 
-  test.failing('rejects malformed client prefix with 400 instead of defaulting to pharmacy @known-bug C-BUG-6', async () => {
+  test('rejects malformed client prefix with 400 instead of defaulting to pharmacy @known-bug C-BUG-6', async () => {
     const coll = await loginAs('coll1');
     // Prefix 'xyz' should be rejected with 400, not silently processed as pharmacy 1
     const res = await coll.post('/api/collections').send({
@@ -117,7 +117,7 @@ describe('POST /api/collections', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('overpayment exceeding client total_debt is rejected or capped @known-bug C-BUG-7', async () => {
+  test('overpayment exceeding client total_debt is rejected or capped @known-bug C-BUG-7', async () => {
     const coll = await loginAs('coll1');
     const doc = await one('SELECT total_debt FROM doctors WHERE id = 2');
     const excessiveAmount = Number(doc.total_debt) + 50000;

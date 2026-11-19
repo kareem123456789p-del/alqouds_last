@@ -200,7 +200,7 @@ describe('POST /api/orders/:id/return', () => {
 });
 
 describe('GET /api/orders/:id/details & items', () => {
-  test.failing('GET /api/orders/:id/details returns full order details @known-bug C-BUG-2', async () => {
+  test('GET /api/orders/:id/details returns full order details @known-bug C-BUG-2', async () => {
     const emp = await loginAs('emp1');
     // Seeded order id 1
     const res = await emp.get('/api/orders/1/details');

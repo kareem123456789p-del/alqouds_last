@@ -69,7 +69,7 @@ describe('POST /api/withdrawals', () => {
     expect(res.status).toBe(404);
   });
 
-  test.failing('rejects negative withdrawal amount with 400 @known-bug C-BUG-9', async () => {
+  test('rejects negative withdrawal amount with 400 @known-bug C-BUG-9', async () => {
     const emp = await loginAs('emp1');
     // Negative withdrawal should be rejected with 400, but code only checks !amount
     const res = await emp.post('/api/withdrawals').send({
@@ -80,7 +80,7 @@ describe('POST /api/withdrawals', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('rejects creating a withdrawal for staff belonging to another branch @known-bug C-BUG-8', async () => {
+  test('rejects creating a withdrawal for staff belonging to another branch @known-bug C-BUG-8', async () => {
     const emp = await loginAs('emp1'); // branch 1
     // Staff id 12 (Branch Two Manager) belongs to branch 2
     const res = await emp.post('/api/withdrawals').send({

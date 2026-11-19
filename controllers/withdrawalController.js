@@ -99,10 +99,15 @@ const createWithdrawal = async (req, res, next) => {
             return res.status(400).json({ error: 'staff_id, amount, and reason are required.' });
         }
 
-        // Fetch staff base salary
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || numAmount <= 0) {
+            return res.status(400).json({ error: 'amount must be a positive number.' });
+        }
+
+        // Fetch staff base salary within caller branch
         const [[staff]] = await pool.execute(
-            'SELECT id, name, base_salary FROM staff WHERE id = ?',
-            [staff_id]
+            'SELECT id, name, base_salary, branch_id FROM staff WHERE id = ? AND branch_id = ?',
+            [staff_id, req.branchId]
         );
         if (!staff) return res.status(404).json({ error: 'Staff member not found.' });
 
@@ -114,12 +119,12 @@ const createWithdrawal = async (req, res, next) => {
               AND EXTRACT(YEAR FROM created_at)  = EXTRACT(YEAR FROM CURRENT_DATE)
         `, [staff_id, req.branchId]);
 
-        const newTotal = parseFloat(monthly_sum) + parseFloat(amount);
+        const newTotal = parseFloat(monthly_sum) + numAmount;
         const is_high_ratio = newTotal > parseFloat(staff.base_salary || 0) * 0.5;
 
         const [result] = await pool.execute(
             'INSERT INTO employee_withdrawals (staff_id, amount, reason, category, branch_id) VALUES (?, ?, ?, ?, ?)',
-            [staff_id, amount, reason, category || 'Personal', req.branchId]
+            [staff_id, numAmount, reason, category || 'Personal', req.branchId]
         );
 
         res.status(201).json({

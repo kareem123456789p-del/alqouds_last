@@ -29,7 +29,7 @@ describe('Orders Branch Isolation (Golden Rule 1)', () => {
     branch2OrderId = res.body.order_id;
   });
 
-  test.failing('GET /api/orders is strictly scoped to the caller branch @known-bug C-BUG-3', async () => {
+  test('GET /api/orders is strictly scoped to the caller branch @known-bug C-BUG-3', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.get('/api/orders');
     expect(res.status).toBe(200);
@@ -39,13 +39,13 @@ describe('Orders Branch Isolation (Golden Rule 1)', () => {
     expect(orderIds).not.toContain(branch2OrderId);
   });
 
-  test.failing('GET /api/orders/:id/items rejects accessing order from another branch with 404 @known-bug C-BUG-3', async () => {
+  test('GET /api/orders/:id/items rejects accessing order from another branch with 404 @known-bug C-BUG-3', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.get(`/api/orders/${branch2OrderId}/items`);
     expect(res.status).toBe(404);
   });
 
-  test.failing('PUT /api/orders/:id/cancel rejects cancelling an order from another branch @known-bug C-BUG-3', async () => {
+  test('PUT /api/orders/:id/cancel rejects cancelling an order from another branch @known-bug C-BUG-3', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.put(`/api/orders/${branch2OrderId}/cancel`);
     expect([403, 404]).toContain(res.status);
@@ -55,7 +55,7 @@ describe('Orders Branch Isolation (Golden Rule 1)', () => {
     expect(order.status).toBe('Pending');
   });
 
-  test.failing('PUT /api/orders/:id/dispatch rejects dispatching an order from another branch @known-bug C-BUG-3', async () => {
+  test('PUT /api/orders/:id/dispatch rejects dispatching an order from another branch @known-bug C-BUG-3', async () => {
     const emp1 = await loginAs('emp1');
     const res = await emp1.put(`/api/orders/${branch2OrderId}/dispatch`);
     expect([403, 404]).toContain(res.status);

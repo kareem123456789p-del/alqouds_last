@@ -101,7 +101,16 @@ const getCostPrice = async (req, res, next) => {
 // GET /api/orders/clients
 const getClients = async (req, res, next) => {
     try {
-        const [clients] = await pool.execute('SELECT id, name FROM clients ORDER BY name ASC');
+        const branchId = req.branchId;
+        const [docs] = await pool.execute(
+            "SELECT CONCAT('doc-', id) as id, name FROM doctors WHERE branch_id = ? ORDER BY name ASC",
+            [branchId]
+        );
+        const [pharms] = await pool.execute(
+            "SELECT CONCAT('pharm-', id) as id, name FROM pharmacies WHERE branch_id = ? ORDER BY name ASC",
+            [branchId]
+        );
+        const clients = [...docs, ...pharms].sort((a, b) => a.name.localeCompare(b.name));
         res.json(clients);
     } catch (err) { next(err); }
 };
@@ -166,20 +175,31 @@ const getOrders = async (req, res, next) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 50, 100);
         const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
 
-        const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM orders`);
+        let whereClause = '';
+        let params = [];
+        if (!isAdmin) {
+            whereClause = 'WHERE o.branch_id = ?';
+            params.push(req.branchId);
+        }
+
+        const countQuery = `SELECT COUNT(*) AS total FROM orders ${whereClause ? 'WHERE branch_id = ?' : ''}`;
+        const [[{ total }]] = await pool.execute(countQuery, params);
 
         const [orders] = await pool.execute(`
             SELECT 
-                o.id, o.order_number, o.created_at, o.total_amount, o.status,
+                o.id, o.order_number, o.created_at, o.total_amount, o.status, o.branch_id,
                 COALESCE(d.name, p.name) as client_name,
                 COALESCE(o.client_id, o.pharmacy_id) as client_id
             FROM orders o
             LEFT JOIN doctors d ON o.client_id = d.id
             LEFT JOIN pharmacies p ON o.pharmacy_id = p.id
+            ${whereClause}
             ORDER BY o.created_at DESC
             LIMIT ${limit} OFFSET ${offset}
-        `);
+        `, params);
 
         res.json({ orders, total, limit, offset });
     } catch (err) { next(err); }
@@ -189,6 +209,8 @@ const getOrders = async (req, res, next) => {
 const getOrderById = async (req, res, next) => {
     try {
         const orderId = req.params.id;
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
 
         const [[order]] = await pool.execute(`
             SELECT o.*,
@@ -209,6 +231,9 @@ const getOrderById = async (req, res, next) => {
         `, [orderId]);
 
         if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        if (!isAdmin && order.branch_id !== req.branchId) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
@@ -236,6 +261,15 @@ const getOrderById = async (req, res, next) => {
 const getOrderItems = async (req, res, next) => {
     try {
         const orderId = req.params.id;
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+
+        const [[order]] = await pool.execute('SELECT id, branch_id FROM orders WHERE id = ?', [orderId]);
+        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (!isAdmin && order.branch_id !== req.branchId) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
         const [items] = await pool.execute(`
             SELECT oi.*, p.name as product_name
             FROM order_items oi
@@ -249,18 +283,20 @@ const getOrderItems = async (req, res, next) => {
 // POST /api/orders
 // Creates the order, inserts items, and immediately records debt on the customer ledger.
 const createOrder = async (req, res, next) => {
+    const { client_id: rawClientId, warehouse_id, expected_delivery, items } = req.body;
+
+    if (!rawClientId || !warehouse_id || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Client, warehouse, and items are required.' });
+    }
+
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-        const { client_id: rawClientId, warehouse_id, expected_delivery, items } = req.body;
-
-        if (!rawClientId || !warehouse_id || !items || items.length === 0) {
-            return res.status(400).json({ error: 'Client, warehouse, and items are required.' });
-        }
 
         // Resolve client
         const { client, isDoctor, dbClientId, dbPharmacyId } = await resolveClient(connection, rawClientId);
         if (!client) {
+            await connection.rollback();
             return res.status(404).json({ error: 'Client not found in database.' });
         }
 
@@ -284,10 +320,12 @@ const createOrder = async (req, res, next) => {
             );
         }
 
+        const createdByStaffId = req.user?.userId || req.user?.id || null;
+
         // Insert order
         const [orderResult] = await connection.execute(
-            `INSERT INTO orders (order_number, client_id, pharmacy_id, warehouse_id, expected_delivery, total_amount, status, branch_id) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?)`,
-            [orderNumber, dbClientId, dbPharmacyId, warehouse_id, expected_delivery || null, totalAmount, req.branchId || 1]
+            `INSERT INTO orders (order_number, client_id, pharmacy_id, warehouse_id, expected_delivery, total_amount, status, branch_id, created_by) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)`,
+            [orderNumber, dbClientId, dbPharmacyId, warehouse_id, expected_delivery || null, totalAmount, req.branchId || 1, createdByStaffId]
         );
         const orderId = orderResult.insertId;
 
@@ -338,8 +376,14 @@ const dispatchOrder = async (req, res, next) => {
         await connection.beginTransaction();
         const orderId = req.params.id;
 
-        const [[order]] = await connection.execute('SELECT * FROM orders WHERE id = ?', [orderId]);
+        const [[order]] = await connection.execute('SELECT * FROM orders WHERE id = ? FOR UPDATE', [orderId]);
         if (!order) throw new Error('Order not found');
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        if (!isAdmin && order.branch_id !== req.branchId) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Order not found in caller branch.' });
+        }
         if (order.status !== 'Pending') throw new Error('Order is not in Pending status');
 
         // Inventory deduction (FEFO or strict batch)
@@ -494,8 +538,14 @@ const cancelOrder = async (req, res, next) => {
         await connection.beginTransaction();
         const orderId = req.params.id;
 
-        const [[order]] = await connection.execute('SELECT * FROM orders WHERE id = ?', [orderId]);
+        const [[order]] = await connection.execute('SELECT * FROM orders WHERE id = ? FOR UPDATE', [orderId]);
         if (!order) throw new Error('Order not found');
+        const role = req.user?.role ? req.user.role.toUpperCase() : '';
+        const isAdmin = (role === 'ADMIN' || role === 'SUPER ADMIN');
+        if (!isAdmin && order.branch_id !== req.branchId) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Order not found in caller branch.' });
+        }
         if (order.status !== 'Pending') throw new Error('Only Pending orders can be cancelled. Dispatched orders must be returned instead.');
 
         // Resolve client to reverse the debt
@@ -553,10 +603,10 @@ async function getClientHistory(req, res, next) {
             ORDER BY o.created_at DESC
         `);
 
-        // ── Outstanding balance (sum of non-cancelled orders) ──────────────
-        const totalBalance = orders
-            .filter(o => o.status !== 'Cancelled')
-            .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+        // ── Outstanding balance (from client's actual total_debt) ──────────────
+        const clientTable = clientType === 'doctor' ? 'doctors' : 'pharmacies';
+        const [[clientRow]] = await pool.execute(`SELECT COALESCE(total_debt, 0) as total_debt FROM ${clientTable} WHERE id = ?`, [id]);
+        const totalBalance = clientRow ? parseFloat(clientRow.total_debt) : 0;
 
         // ── Group by Month Year ────────────────────────────────────────────
         const monthMap = new Map();
