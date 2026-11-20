@@ -2,7 +2,11 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:kareem@localhost:5432/alquods_db',
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres@127.0.0.1:5433/alquods_db',
+});
+
+pool.on('error', (err) => {
+    console.error('⚠️ Unexpected idle client error in PostgreSQL pool:', err);
 });
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
