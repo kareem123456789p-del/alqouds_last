@@ -771,7 +771,7 @@ function generateInventoryReportPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        // Dual font support (Amiri / Cairo)
+        // Dual font support (Amiri / Cairo TrueType fonts)
         let fontName = 'helvetica';
         if (window.AmiriBase64) {
             try {
@@ -803,12 +803,12 @@ function generateInventoryReportPDF() {
         const branchConfig = {
             1: { 
                 name: 'مركز القدس 1 للمستلزمات والاجهزة الطبية', 
-                address: 'اسوان - النفق - عمارة الدكتور عبد الحميد', 
+                address: 'أسوان - النفق - عمارة الدكتور عبد الحميد', 
                 phones: '01114459296 - 01152950806' 
             },
             2: { 
                 name: 'مركز القدس 2 للمستلزمات والأجهزة الطبية', 
-                address: 'اسوان - السيل - شارع المشرحة بجوار مستشفى اسوان الجامعي - مركز القدس 2', 
+                address: 'أسوان - السيل - شارع المشرحة بجوار مستشفى أسوان الجامعي - مركز القدس 2', 
                 phones: '01155675246 - 01221884709 - 01220212028 - 01227831253' 
             }
         };
@@ -831,50 +831,49 @@ function generateInventoryReportPDF() {
 
         // Date & Totals
         const now = new Date();
-        const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
-        const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-        const isoDate = now.toISOString().split('T')[0];
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
         const totalQuantity = (allItems || []).reduce((sum, it) => sum + (parseInt(it.quantity) || 0), 0);
         const totalValuation = (allItems || []).reduce((sum, it) => sum + ((parseFloat(it.unit_price) || 0) * (parseInt(it.quantity) || 0)), 0);
 
         // Header Section
         doc.setFont(fontName, 'bold');
-        doc.setFontSize(20);
+        doc.setFontSize(22);
         doc.setTextColor(30, 41, 59); // slate-800
-        doc.text(window.fixArabic("تقرير جرد المخزون"), 105, 17, { align: "center", lang: 'ar' });
+        doc.text("تقرير جرد المخزون", 105, 18, { align: "center" });
 
-        doc.setFontSize(12);
+        doc.setFontSize(13);
         doc.setTextColor(37, 99, 235); // blue-600
-        doc.text(window.fixArabic(branchName), 105, 24, { align: "center", lang: 'ar' });
+        doc.text(branchName, 105, 26, { align: "center" });
 
         // Decorative Line
         doc.setDrawColor(203, 213, 225); // slate-300
         doc.setLineWidth(0.4);
-        doc.line(14, 28, 196, 28);
+        doc.line(14, 30, 196, 30);
 
         // Metadata Info Bar
         doc.setFont(fontName, 'normal');
-        doc.setFontSize(9.5);
+        doc.setFontSize(10);
         doc.setTextColor(71, 85, 105); // slate-600
 
         // Right-side info
-        doc.text(window.fixArabic(`المخزن: ${whNameAr}`), 196, 34, { align: "right", lang: 'ar' });
-        doc.text(window.fixArabic(`تاريخ الجرد: ${dateStr} - ${timeStr}`), 196, 40, { align: "right", lang: 'ar' });
+        doc.text("المخزن: " + whNameAr, 196, 37, { align: "right" });
+        doc.text("تاريخ الجرد: " + dateStr + "  " + timeStr, 196, 43, { align: "right" });
 
         // Left-side info
-        doc.text(window.fixArabic(`إجمالي الأصناف: ${allItems.length}`), 14, 34, { align: "left", lang: 'ar' });
-        doc.text(window.fixArabic(`إجمالي القيمة: ${totalValuation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`), 14, 40, { align: "left", lang: 'ar' });
+        doc.text("إجمالي الأصناف: " + (allItems ? allItems.length : 0) + " صنف", 14, 37, { align: "left" });
+        doc.text("إجمالي القيمة: " + totalValuation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ج.م", 14, 43, { align: "left" });
 
         // Table Data & Headers
         const tableColumn = [
-            window.fixArabic("الإجمالي (ج.م)"),
-            window.fixArabic("سعر الوحدة (ج.م)"),
-            window.fixArabic("الكمية"),
-            window.fixArabic("تاريخ الصلاحية"),
-            window.fixArabic("رقم التشغيلة"),
-            window.fixArabic("اسم الصنف"),
-            window.fixArabic("م")
+            "الإجمالي (ج.م)",
+            "سعر الوحدة (ج.م)",
+            "الكمية",
+            "تاريخ الصلاحية",
+            "رقم التشغيلة",
+            "اسم الصنف",
+            "م"
         ];
 
         const tableRows = (allItems || []).map((item, index) => {
@@ -890,12 +889,12 @@ function generateInventoryReportPDF() {
                 qty.toLocaleString('en-US'),
                 expiry,
                 batchNo,
-                window.fixArabic(item.name || 'صنف غير محدد'),
+                item.name || 'صنف غير محدد',
                 (index + 1).toString()
             ];
         });
 
-        // AutoTable
+        // AutoTable with Native Arabic Support
         doc.autoTable({
             head: [tableColumn],
             body: tableRows,
@@ -905,10 +904,10 @@ function generateInventoryReportPDF() {
                 totalQuantity.toLocaleString('en-US'),
                 "",
                 "",
-                window.fixArabic(`إجمالي الأصناف: ${allItems.length}`),
-                window.fixArabic("المجموع")
+                "المجموع الكلي لـ " + (allItems ? allItems.length : 0) + " صنف",
+                "-"
             ]],
-            startY: 45,
+            startY: 48,
             theme: 'grid',
             headStyles: {
                 fillColor: [37, 99, 235], // Blue-600
@@ -936,13 +935,13 @@ function generateInventoryReportPDF() {
                 fontStyle: 'bold',
                 halign: 'center'
             },
-            margin: { top: 10, left: 14, right: 14, bottom: 20 },
+            margin: { top: 10, left: 14, right: 14, bottom: 22 },
             columnStyles: {
                 0: { cellWidth: 26, halign: 'center' }, // Total
                 1: { cellWidth: 26, halign: 'center' }, // Unit Price
-                2: { cellWidth: 18, halign: 'center' }, // Quantity
+                2: { cellWidth: 16, halign: 'center' }, // Quantity
                 3: { cellWidth: 24, halign: 'center' }, // Expiry Date
-                4: { cellWidth: 24, halign: 'center' }, // Batch
+                4: { cellWidth: 26, halign: 'center' }, // Batch
                 5: { cellWidth: 54, halign: 'right' },  // Item Name
                 6: { cellWidth: 10, halign: 'center' }  // #
             }
@@ -959,12 +958,12 @@ function generateInventoryReportPDF() {
             doc.setLineWidth(0.4);
             doc.line(14, 283, 196, 283);
 
-            doc.text(window.fixArabic(`العنوان: ${branchMeta.address}  |  هاتف: ${branchMeta.phones}`), 105, 288, { align: 'center', lang: 'ar' });
-            doc.text(window.fixArabic(`صفحة ${p} من ${pageCount}`), 196, 292, { align: 'right', lang: 'ar' });
-            doc.text(window.fixArabic("نظام مركز القدس الطبي"), 14, 292, { align: 'left', lang: 'ar' });
+            doc.text("العنوان: " + branchMeta.address + "  |  هاتف: " + branchMeta.phones, 105, 288, { align: 'center' });
+            doc.text("صفحة " + p + " من " + pageCount, 196, 292, { align: 'right' });
+            doc.text("نظام مركز القدس الطبي", 14, 292, { align: 'left' });
         }
 
-        doc.save(`تقرير_جرد_${whFileName}_${isoDate}.pdf`);
+        doc.save(`تقرير_جرد_${whFileName}_${dateStr}.pdf`);
 
     } catch (err) {
         console.error("PDF Generate Error:", err);

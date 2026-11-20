@@ -161,7 +161,7 @@ start_app() {
         exec node app.js
     else
         log_info "Starting app in background..."
-        nohup node app.js > "$APP_LOG" 2>&1 &
+        setsid nohup node app.js > "$APP_LOG" 2>&1 &
         local app_pid=$!
         echo "$app_pid" > "$APP_PID_FILE"
 
