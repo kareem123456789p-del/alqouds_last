@@ -3,8 +3,32 @@
  * Performs an asynchronous check on DOMContentLoaded to verify user session.
  * If unauthorized or session is expired, redirects immediately to login page.
  * Stores session data on window.__alqudsUser for downstream scripts to use.
- * Also enforces route-level page access restrictions (e.g. collections.html, analytics.html).
+ * Also enforces route-level page access restrictions (e.g. collections.html, analytics.html)
+ * and dynamically synchronizes branch headers with user's active branch.
  */
+
+function syncBranchHeaders(user) {
+    if (!user) return;
+    const branchName = user.active_branch_name && user.active_branch_name !== 'Unknown'
+        ? user.active_branch_name
+        : (user.active_branch_id === 1 ? 'مركز القدس 1 للمستلزمات الطبية' : 'مركز القدس 2 للمستلزمات والأجهزة الطبية');
+
+    // Update target elements by explicit ID or class
+    document.querySelectorAll('#header-branch-title, .header-branch-name, [data-branch-header]').forEach(el => {
+        el.textContent = branchName;
+    });
+
+    // Replace legacy headers that previously had hardcoded "مركز القدس 2"
+    document.querySelectorAll('.new-global-header h2, .top-nav .nav-brand span').forEach(el => {
+        if (el.textContent.includes('مركز القدس')) {
+            el.textContent = branchName;
+        }
+    });
+
+    window.dispatchEvent(new CustomEvent('alquds:branch-synced', { detail: { branchName, user } }));
+}
+window.syncBranchHeaders = syncBranchHeaders;
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const res = await fetch('/api/auth/check', { credentials: 'same-origin' });
@@ -21,6 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Expose user data for downstream scripts (e.g., main.js nav rendering)
         window.__alqudsUser = data;
         window.__activeBranchId = data.active_branch_id || data.assigned_branch_id || 2;
+
+        // Synchronize branch headers dynamically
+        syncBranchHeaders(data);
 
         // Route-level page protection: Collections page
         const path = window.location.pathname.toLowerCase();
