@@ -10,6 +10,8 @@
 # Node
 node_modules/
 npm-debug.log*
+.app.pid
+app.log
 
 # Uploads & temp files
 public/uploads/
