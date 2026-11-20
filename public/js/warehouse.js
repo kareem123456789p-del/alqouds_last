@@ -765,115 +765,209 @@ document.addEventListener('keydown', e => {
 // ── PDF Generation ──────────────────────────────────────
 function generateInventoryReportPDF() {
     try {
-        if (!window.jspdf || !window.jspdf.jsPDF) return alert("PDF library not loaded. Please refresh.");
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            return alert("PDF library not loaded. Please refresh.");
+        }
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        console.log("Font Loaded:", !!window.AmiriBase64);
-        if (!window.AmiriBase64) {
-            return alert("Arabic font not loaded! Please check network tab for ./js/amiri_font.js");
+        // Dual font support (Amiri / Cairo)
+        let fontName = 'helvetica';
+        if (window.AmiriBase64) {
+            try {
+                doc.addFileToVFS('Amiri-Regular.ttf', window.AmiriBase64);
+                doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+                doc.addFont('Amiri-Regular.ttf', 'Amiri', 'bold');
+                doc.setFont('Amiri');
+                fontName = 'Amiri';
+            } catch (err) {
+                console.warn("Could not register Amiri font:", err);
+            }
+        } else if (window.CairoBase64) {
+            try {
+                doc.addFileToVFS('Cairo-Regular.ttf', window.CairoBase64);
+                doc.addFont('Cairo-Regular.ttf', 'Cairo', 'normal');
+                doc.addFont('Cairo-Regular.ttf', 'Cairo', 'bold');
+                doc.setFont('Cairo');
+                fontName = 'Cairo';
+            } catch (err) {
+                console.warn("Could not register Cairo font:", err);
+            }
         }
 
-        try {
-            doc.addFileToVFS('Amiri-Regular.ttf', window.AmiriBase64);
-            doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-            doc.addFont('Amiri-Regular.ttf', 'Amiri', 'bold');
-            doc.setFont('Amiri');
-        } catch (err) {
-            console.error("Font error:", err);
-            return alert("Error loading Arabic font: " + err.message);
+        if (fontName === 'helvetica') {
+            console.warn("Arabic font not loaded; rendering in fallback font.");
         }
 
-        doc.setFontSize(22);
-        doc.setTextColor(30, 41, 59);
-        const titleY = 20;
+        // Dynamic Branch Resolution
+        const branchConfig = {
+            1: { 
+                name: 'مركز القدس 1 للمستلزمات والاجهزة الطبية', 
+                address: 'اسوان - النفق - عمارة الدكتور عبد الحميد', 
+                phones: '01114459296 - 01152950806' 
+            },
+            2: { 
+                name: 'مركز القدس 2 للمستلزمات والأجهزة الطبية', 
+                address: 'اسوان - السيل - شارع المشرحة بجوار مستشفى اسوان الجامعي - مركز القدس 2', 
+                phones: '01155675246 - 01221884709 - 01220212028 - 01227831253' 
+            }
+        };
+        const activeBranchId = window.__activeBranchId || (window.__alqudsUser && window.__alqudsUser.active_branch_id) || 2;
+        const branchMeta = branchConfig[activeBranchId] || branchConfig[2];
+        const branchName = (window.__alqudsUser && window.__alqudsUser.active_branch_name && window.__alqudsUser.active_branch_name !== 'Unknown')
+            ? window.__alqudsUser.active_branch_name
+            : branchMeta.name;
 
-        doc.setFont('Amiri', 'bold');
-        doc.text(window.fixArabic("تقرير الجرد"), 105, titleY, { align: "center", lang: 'ar' });
-
-        doc.setFontSize(14);
-        doc.text(window.fixArabic("مركز القدس 2 للمستلزمات والأجهزة الطبية"), 105, titleY + 7, { align: "center", lang: 'ar' });
-
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US');
-        const timeStr = now.toLocaleTimeString('en-US');
-
-        let whName = "All Warehouses";
+        // Warehouse Info
+        let whNameAr = "كافة المخازن";
+        let whFileName = "كل_المخازن";
         if (currentWarehouseId) {
             const wh = warehouses.find(w => String(w.id) === String(currentWarehouseId));
-            if (wh) whName = wh.name;
+            if (wh && wh.name) {
+                whNameAr = wh.name;
+                whFileName = wh.name.replace(/\s+/g, '_');
+            }
         }
 
-        doc.setFontSize(11);
-        doc.setTextColor(71, 85, 105);
-        doc.setFont('helvetica', 'normal');
+        // Date & Totals
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const isoDate = now.toISOString().split('T')[0];
 
-        const detailsY = 40;
-        doc.text(`Warehouse: ${whName}`, 14, detailsY);
-        doc.text(`Date: ${dateStr} ${timeStr}`, 14, detailsY + 6);
+        const totalQuantity = (allItems || []).reduce((sum, it) => sum + (parseInt(it.quantity) || 0), 0);
+        const totalValuation = (allItems || []).reduce((sum, it) => sum + ((parseFloat(it.unit_price) || 0) * (parseInt(it.quantity) || 0)), 0);
 
-        const specificTotalElement = document.getElementById('wh-specific-value');
-        if (specificTotalElement && specificTotalElement.textContent) {
-            doc.text(`${specificTotalElement.textContent}`, 120, detailsY);
-        }
+        // Header Section
+        doc.setFont(fontName, 'bold');
+        doc.setFontSize(20);
+        doc.setTextColor(30, 41, 59); // slate-800
+        doc.text(window.fixArabic("تقرير جرد المخزون"), 105, 17, { align: "center", lang: 'ar' });
 
+        doc.setFontSize(12);
+        doc.setTextColor(37, 99, 235); // blue-600
+        doc.text(window.fixArabic(branchName), 105, 24, { align: "center", lang: 'ar' });
+
+        // Decorative Line
+        doc.setDrawColor(203, 213, 225); // slate-300
+        doc.setLineWidth(0.4);
+        doc.line(14, 28, 196, 28);
+
+        // Metadata Info Bar
+        doc.setFont(fontName, 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(71, 85, 105); // slate-600
+
+        // Right-side info
+        doc.text(window.fixArabic(`المخزن: ${whNameAr}`), 196, 34, { align: "right", lang: 'ar' });
+        doc.text(window.fixArabic(`تاريخ الجرد: ${dateStr} - ${timeStr}`), 196, 40, { align: "right", lang: 'ar' });
+
+        // Left-side info
+        doc.text(window.fixArabic(`إجمالي الأصناف: ${allItems.length}`), 14, 34, { align: "left", lang: 'ar' });
+        doc.text(window.fixArabic(`إجمالي القيمة: ${totalValuation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`), 14, 40, { align: "left", lang: 'ar' });
+
+        // Table Data & Headers
         const tableColumn = [
-            window.fixArabic("الإجمالي"), 
-            window.fixArabic("رقم التشغيلة"), 
-            window.fixArabic("تاريخ الصلاحية"), 
-            window.fixArabic("سعر القطعة"), 
-            window.fixArabic("الكمية"), 
-            window.fixArabic("اسم الصنف")
+            window.fixArabic("الإجمالي (ج.م)"),
+            window.fixArabic("سعر الوحدة (ج.م)"),
+            window.fixArabic("الكمية"),
+            window.fixArabic("تاريخ الصلاحية"),
+            window.fixArabic("رقم التشغيلة"),
+            window.fixArabic("اسم الصنف"),
+            window.fixArabic("م")
         ];
-        const tableRows = [];
 
-        allItems.forEach(item => {
-            const expiry = item.expiry_date ? item.expiry_date.split('T')[0] : 'N/A';
-            const batchNo = item.batch_number ? item.batch_number : 'N/A';
+        const tableRows = (allItems || []).map((item, index) => {
+            const expiry = (item.expiry_date && !item.expiry_date.includes('N/A')) ? item.expiry_date.split('T')[0] : '-';
+            const batchNo = (item.batch_number && item.batch_number !== 'N/A') ? item.batch_number : '-';
             const price = parseFloat(item.unit_price || 0);
             const qty = parseInt(item.quantity || 0);
             const total = price * qty;
 
-            const itemData = [
-                window.fixArabic("ج.م " + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
-                window.fixArabic(batchNo),
+            return [
+                total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                qty.toLocaleString('en-US'),
                 expiry,
-                window.fixArabic("ج.م " + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
-                qty.toString(),
-                window.fixArabic(item.name)
+                batchNo,
+                window.fixArabic(item.name || 'صنف غير محدد'),
+                (index + 1).toString()
             ];
-            tableRows.push(itemData);
         });
 
+        // AutoTable
         doc.autoTable({
             head: [tableColumn],
             body: tableRows,
-            startY: detailsY + 15,
+            foot: [[
+                totalValuation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                "",
+                totalQuantity.toLocaleString('en-US'),
+                "",
+                "",
+                window.fixArabic(`إجمالي الأصناف: ${allItems.length}`),
+                window.fixArabic("المجموع")
+            ]],
+            startY: 45,
             theme: 'grid',
-            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 10, font: 'Amiri', fontStyle: 'bold', halign: 'center' },
-            styles: { fontSize: 10, textColor: 51, font: 'Amiri', fontStyle: 'normal', halign: 'right', cellPadding: 5 },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
-            margin: { top: 10, left: 14, right: 14 },
+            headStyles: {
+                fillColor: [37, 99, 235], // Blue-600
+                textColor: 255,
+                fontSize: 9.5,
+                font: fontName,
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            bodyStyles: {
+                fontSize: 9,
+                textColor: [30, 41, 59],
+                font: fontName,
+                fontStyle: 'normal',
+                cellPadding: 3
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            footStyles: {
+                fillColor: [241, 245, 249],
+                textColor: [15, 23, 42],
+                fontSize: 9.5,
+                font: fontName,
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            margin: { top: 10, left: 14, right: 14, bottom: 20 },
             columnStyles: {
-                0: { cellWidth: 30, halign: 'center' },
-                1: { cellWidth: 25, halign: 'center' },
-                2: { cellWidth: 25, halign: 'center' },
-                3: { cellWidth: 20, halign: 'center' },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 60, halign: 'right' }
+                0: { cellWidth: 26, halign: 'center' }, // Total
+                1: { cellWidth: 26, halign: 'center' }, // Unit Price
+                2: { cellWidth: 18, halign: 'center' }, // Quantity
+                3: { cellWidth: 24, halign: 'center' }, // Expiry Date
+                4: { cellWidth: 24, halign: 'center' }, // Batch
+                5: { cellWidth: 54, halign: 'right' },  // Item Name
+                6: { cellWidth: 10, halign: 'center' }  // #
             }
         });
 
-        doc.setFontSize(10);
-        doc.setTextColor(15, 23, 42);
-        doc.setFont('Amiri', 'normal');
-        doc.text(window.fixArabic("للتواصل بنا : 01155675246- 01221884709- 01220212028 - 01227831253"), 105, 280, { align: "center", lang: 'ar' });
-        doc.text(window.fixArabic("العنوان : اسوان - السيل - شارع المشرحه بجوار مستشفي اسوان الجامعي - مركز القدس 2"), 105, 285, { align: "center", lang: 'ar' });
+        // Multi-page Footers
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let p = 1; p <= pageCount; p++) {
+            doc.setPage(p);
+            doc.setFont(fontName, 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(100, 116, 139);
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.4);
+            doc.line(14, 283, 196, 283);
 
-        doc.save(`Inventory_Report_${whName.replace(/\s+/g, '_')}_${dateStr.replace(/\//g, '-')}.pdf`);
+            doc.text(window.fixArabic(`العنوان: ${branchMeta.address}  |  هاتف: ${branchMeta.phones}`), 105, 288, { align: 'center', lang: 'ar' });
+            doc.text(window.fixArabic(`صفحة ${p} من ${pageCount}`), 196, 292, { align: 'right', lang: 'ar' });
+            doc.text(window.fixArabic("نظام مركز القدس الطبي"), 14, 292, { align: 'left', lang: 'ar' });
+        }
+
+        doc.save(`تقرير_جرد_${whFileName}_${isoDate}.pdf`);
 
     } catch (err) {
         console.error("PDF Generate Error:", err);
-        alert("Failed to generate PDF.");
+        alert("فشل في إنشاء ملف PDF: " + err.message);
     }
 }

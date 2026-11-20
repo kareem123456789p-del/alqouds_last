@@ -21,11 +21,6 @@ tmp/
 .DS_Store
 Thumbs.db
 
-
-
-
-public/js/amiri_font.js
-
 database_backup.sql
 
 # QA / test tooling
